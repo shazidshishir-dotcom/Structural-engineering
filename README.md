@@ -9,8 +9,8 @@ This repository contains engineering calculations, automation tools, design reso
 - Structural Analysis & Design
 - RCC & Steel Structures
 - Telecom Tower Design
-- BNBC 2020
-- TIA-222
+- BNBC 2020/ ACI-318-14
+- TIA-222G/H/ ASCE-7-05 
 - Engineering Automation
 - Excel VBA
 - Python
@@ -19,12 +19,12 @@ This repository contains engineering calculations, automation tools, design reso
 
 ## Future Projects
 
-- BNBC Wind Load Calculator
-- Telecom Tower Foundation Design
+- BNBC-2020 Wind Load Calculator
+- Telecom Tower & Foundation Design
 - RCC Carbon Calculator
 - BOQ Automation
 - Engineering Excel Tools
 
 ---
 
-Created and maintained by **Shazid-ul Alam**.
+Created and maintained by **Shazid**.
