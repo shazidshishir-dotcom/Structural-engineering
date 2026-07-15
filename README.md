@@ -1,14 +1,12 @@
-# BNBC-2020 Wind Calculator
+structural-engineering
 
-This project calculates wind load according to BNBC 2020.
+README.md
 
-Features
-
-- Wind Speed Input
-- Terrain Category
-- Exposure
-- Pressure Calculation
-
-Author
-
-Shazid
+Code
+Issues
+Pull Requests
+Actions
+Projects
+Wiki
+Insights
+Settings
