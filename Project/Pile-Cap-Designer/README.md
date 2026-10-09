@@ -12,11 +12,21 @@ Give the **number of piles** and the **column load** — the tool returns the
   θ ≥ 25°, bottle strut βs 0.60, pile-node βn)**.
 - Bottom reinforcement = `max(flexure, minimum steel, strut-and-tie ties)`.
 
-Load case toggle: **axial only**, or **axial + moment** (Mx, My distributed to
-the piles as `P/n ± M·x/Σx²`, rigid-cap). Standard pile groups: 1, 2, 3, 4, 5,
-6, 7, 8, 9, 12, 16.
+### Features
+- **Load combinations** — enter Dead / Live / Wind / Seismic cases (P, Mx, My);
+  the tool auto-generates and envelopes the BNBC/ACI service (D, D+L, D±0.6W,
+  D±0.7E, 0.6D±…) and strength (1.4D, 1.2D+1.6L, 1.2D+1.0L±1.0W/E, 0.9D±1.0W/E)
+  combinations, W/E taken ±. Optional **+33% allowable (Qa/Qt) for W/E** combos.
+- **Qa / Qt from an SPT soil report** (BNBC §3.10): editable borehole,
+  bored/driven, layer-wise skin friction + end bearing, FS 3.5 and the 1.5/3.0
+  partial check, uplift (0.7Qs+W)/FS — feeds the design automatically.
+- **Top + bottom reinforcement**; bar Ø is user-selected (optional auto-upsize).
+- **Triangular 3-pile cap** option (saves concrete).
+- **Quantities & bar bending schedule**, steel/concrete volumes, optional cost.
+- **Exports:** print/PDF calculation sheet, cap drawing (DXF), bar schedule (CSV).
 
-Self-contained single `index.html` — no build step, works offline.
+Standard pile groups: 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16. Rigid-cap pile loads
+`P/n ± M·x/Σx²`. Self-contained single `index.html` — no build step, works offline.
 
 ## Engine provenance
 The browser engine is a faithful JavaScript port of the validated
