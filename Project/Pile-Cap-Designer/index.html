@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Pile Cap Designer (BNBC-2020)</title>
-<meta name="description" content="Preliminary pile cap design to BNBC-2020 / ACI 318-14: give the pile count and load, get cap size, thickness and rebar. Strut-and-tie per BNBC Appendix I."/>
+<meta name="description" content="BNBC-2020 / ACI 318-14 pile cap design: pile সংখ্যা ও load দিন, cap size, thickness ও rebar পান। Strut-and-tie per BNBC Appendix I."/>
 <style>
 :root{
   --bg:#f4f6f8; --panel:#ffffff; --ink:#1b2733; --muted:#5a6b7b; --line:#dbe2e8;
@@ -112,30 +112,30 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
   <header class="top">
     <div class="title">
       <h1>Pile Cap Designer</h1>
-      <p>Preliminary pile-cap design to <b>BNBC-2020 (Part 6)</b> / <b>ACI 318-14</b>. Enter the pile count and the
-      column load — cap plan size, thickness and reinforcement are sized automatically, including a 3-D
-      strut-and-tie check per <b>BNBC Appendix I</b>.</p>
+      <p><b>BNBC-2020 (Part 6)</b> / <b>ACI 318-14</b> অনুযায়ী preliminary pile cap design। pile সংখ্যা আর
+      column load দিন — cap-এর plan size, thickness আর reinforcement স্বয়ংক্রিয়ভাবে বের হয়ে আসবে, সাথে
+      <b>BNBC Appendix I</b> অনুযায়ী 3-D strut-and-tie check।</p>
       <div class="badges">
-        <span class="badge">Sizing: unfactored (service)</span>
-        <span class="badge">Design: factored (strength)</span>
+        <span class="badge">Sizing: service load</span>
+        <span class="badge">Design: factored load</span>
         <span class="badge">φ 0.75 shear · 0.90 flexure</span>
-        <span class="badge">Rigid cap</span>
+        <span class="badge">Rigid cap অনুমান</span>
       </div>
     </div>
-    <button class="themebtn" id="theme">◐ Theme</button>
+    <button class="themebtn" id="theme">◐ থিম</button>
   </header>
 
   <div class="grid">
     <!-- ------------------------------- INPUTS ------------------------------- -->
     <form class="card inputs" id="form" autocomplete="off">
-      <div class="hd"><span class="dot"></span>Design input</div>
+      <div class="hd"><span class="dot"></span>ইনপুট</div>
       <div class="bd">
 
         <fieldset>
-          <legend>Pile group &amp; load</legend>
+          <legend>Pile group ও load</legend>
           <div class="row">
             <div>
-              <label class="f"><b>Number of piles</b> (group)</label>
+              <label class="f"><b>Pile সংখ্যা</b> (group)</label>
               <select id="n"></select>
             </div>
             <div>
@@ -145,19 +145,19 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
           </div>
           <label class="f" style="margin-top:8px">Load case</label>
           <div class="seg" id="mode">
-            <button type="button" data-m="axial" class="on">Axial only</button>
+            <button type="button" data-m="axial" class="on">শুধু Axial</button>
             <button type="button" data-m="moment">Axial + moment</button>
           </div>
           <div class="row" style="margin-top:8px">
             <div>
               <label class="f"><b>Service axial load P</b> (kN)</label>
               <input type="number" id="P" value="4000" min="0" step="50"/>
-              <div class="hint">Unfactored column load → sizes the pile count.</div>
+              <div class="hint">Unfactored column load → এটি দিয়ে pile সংখ্যা নির্ধারিত হয়।</div>
             </div>
             <div>
               <label class="f"><b>Load factor</b> (→ factored)</label>
               <input type="number" id="LF" value="1.5" min="1" max="2" step="0.05"/>
-              <div class="hint">Pu = LF·P for cap design.</div>
+              <div class="hint">cap design-এর জন্য Pu = LF·P।</div>
             </div>
           </div>
           <div class="row" id="momRow" style="margin-top:8px;display:none">
@@ -187,7 +187,7 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
         </fieldset>
 
         <fieldset>
-          <legend>Column &amp; materials</legend>
+          <legend>Column ও materials</legend>
           <div class="row">
             <div>
               <label class="f"><b>Column c1</b> ∥X (mm)</label>
@@ -217,7 +217,7 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
         </fieldset>
 
         <details class="adv">
-          <summary>Geometry &amp; self-weight (advanced)</summary>
+          <summary>Geometry ও self-weight (advanced)</summary>
           <fieldset style="margin-top:8px">
             <div class="row">
               <div>
@@ -249,28 +249,28 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
                 <input type="number" id="gavg" value="20" min="0" max="26" step="0.5"/>
               </div>
             </div>
-            <div class="hint" style="margin-top:6px">Cap + backfill weight = γ·Df·area, added to P for the pile-load
-              check only (BNBC §2.7). Set Df = 0 to ignore.</div>
-            <label class="chk"><input type="checkbox" id="tiem"/> Tie / grade beams take column base moments
-              (piles carry axial only)</label>
+            <div class="hint" style="margin-top:6px">Cap + backfill weight = γ·Df·area, শুধু pile-load check-এ
+              P-এর সাথে যোগ হয় (BNBC §2.7)। বাদ দিতে Df = 0 দিন।</div>
+            <label class="chk"><input type="checkbox" id="tiem"/> Tie / grade beams column base moment নেয়
+              (piles শুধু axial load নেয়)</label>
           </fieldset>
         </details>
-        <div class="hint" style="margin-top:4px">Effective cover in the cap is fixed at 150 mm (75 mm pile
-          embedment + 75 mm cover, cast against earth, BNBC §20.6.1.3.1).</div>
+        <div class="hint" style="margin-top:4px">Cap-এ effective cover ধরা হয়েছে 150 mm (75 mm pile embedment
+          + 75 mm cover, cast against earth, BNBC §20.6.1.3.1)।</div>
       </div>
     </form>
 
     <!-- ------------------------------- RESULTS ------------------------------- -->
     <section class="card">
-      <div class="hd"><span class="dot" style="background:var(--brand-2)"></span>Result</div>
+      <div class="hd"><span class="dot" style="background:var(--brand-2)"></span>ফলাফল</div>
       <div class="bd" id="out"></div>
     </section>
   </div>
 
   <footer>
-    Preliminary design — rigid-cap assumption, single load case. Verify punching at edge/corner conditions, pile
-    structural capacity, group action, settlement and grade beams with a detailed model before issuing drawings.
-    <br/>Part of the <a href="../../">Structural Engineering</a> portfolio · BNBC-2020 / ACI 318-14.
+    Preliminary design — rigid-cap অনুমান, একটি load case। drawings দেওয়ার আগে detailed model দিয়ে
+    edge/corner punching, pile structural capacity, group action, settlement আর grade beams যাচাই করুন।
+    <br/><a href="../../">Structural Engineering</a> portfolio-র অংশ · BNBC-2020 / ACI 318-14।
   </footer>
 </div>
 
@@ -459,7 +459,7 @@ function design(inp){
 
   // instability: a single line of piles cannot resist a moment across the line
   const unstable=(Sx2<1e-9&&Math.abs(Mys)>1e-6)||(Sy2<1e-9&&Math.abs(Mxs)>1e-6);
-  if(unstable) notes.push(["bad","NOT ADEQUATE: "+n+" pile(s) in a line cannot resist the base moment — add a pile line, or let tie/grade beams take the moment (advanced option)"]);
+  if(unstable) notes.push(["bad","NOT ADEQUATE: "+n+" pile একটি line-এ আছে, base moment নিতে পারবে না — আরেকটি pile line যোগ করুন, বা tie/grade beams দিয়ে moment নিন (advanced option)"]);
 
   // ---- service pile loads (sizing): P + cap/backfill weight, rigid cap distribution ----
   const Pt=inp.P+wself(B*L);
@@ -558,25 +558,25 @@ function design(inp){
   if(r.Muy<1 && endy==="NOT ENOUGH") endy="90° hooks (min. steel)";
 
   // notes & verdict
-  if(!r.ok) notes.push(["bad","NOT ADEQUATE: "+r.why+" not satisfied at h = 3000 mm — larger piles / more piles / a raft"]);
-  if(endx==="NOT ENOUGH"||endy==="NOT ENOUGH") notes.push(["bad","NOT ADEQUATE: cap bars cannot be developed beyond the column face — larger cap or smaller bars"]);
-  if(!pileComp_ok) notes.push(["bad","NOT ADEQUATE: max pile "+wc.toFixed(0)+" kN > Qa "+Qa.toFixed(0)+" kN"+(n_ax&&n_ax>n?` — try ${n_ax} piles`:(n_ax===null?" — even 16 piles overloaded, use larger piles":""))]);
+  if(!r.ok) notes.push(["bad","NOT ADEQUATE: h = 3000 mm-এও "+r.why+" satisfy হচ্ছে না — বড় pile / বেশি pile / raft"]);
+  if(endx==="NOT ENOUGH"||endy==="NOT ENOUGH") notes.push(["bad","NOT ADEQUATE: column face-এর বাইরে cap bars develop করা যাচ্ছে না — বড় cap বা ছোট bars"]);
+  if(!pileComp_ok) notes.push(["bad","NOT ADEQUATE: max pile "+wc.toFixed(0)+" kN > Qa "+Qa.toFixed(0)+" kN"+(n_ax&&n_ax>n?` — ${n_ax} piles দিয়ে দেখুন`:(n_ax===null?" — 16 piles-এও overload, বড় pile ব্যবহার করুন":""))]);
   if(!pileUp_ok) notes.push(["bad","NOT ADEQUATE: pile tension "+(-wt).toFixed(0)+" kN > Qt "+Qt.toFixed(0)+" kN (uplift)"]);
-  else if(wt<0) notes.push(["rev","pile tension "+(-wt).toFixed(0)+" kN ≤ Qt — reinforce the pile for tension and anchor its bars into the cap"]);
-  if(inp.tiem) notes.push(["inf","tie/grade beams assumed to take the column base moments — piles designed for axial load only"]);
+  else if(wt<0) notes.push(["rev","pile tension "+(-wt).toFixed(0)+" kN ≤ Qt — pile-কে tension-এর জন্য reinforce করুন আর bars cap-এ anchor করুন"]);
+  if(inp.tiem) notes.push(["inf","ধরা হয়েছে tie/grade beams column base moment নিচ্ছে — piles শুধু axial load-এর জন্য design করা"]);
   if(n>1 && r.stm){
     notes.push(["inf","strut-and-tie (BNBC App. I): θmin "+r.stm.th_min+"° (≥25°), bottle strut βs 0.60, pile-node βn "+r.stm.bn+"; bottom bars = max(flexure, STM ties"+(stmGov?` — ties govern ${stmGov}`:"")+")"]);
-    if(r.stm.colNode>1) notes.push(["rev","REVIEW: column-node bearing "+r.stm.colNode.toFixed(2)+"× φ·0.85·f′c(cap) — carry the excess with column dowels into the cap (§6.8.8)"]);
-    if(stmGov) notes.push(["inf","place the governing tie bars in bands over the pile lines (pile Ø + 2× cover wide), anchored beyond the pile centres (§I.4.3)"]);
+    if(r.stm.colNode>1) notes.push(["rev","REVIEW: column-node bearing "+r.stm.colNode.toFixed(2)+"× φ·0.85·f′c(cap) — অতিরিক্ত অংশ column dowels দিয়ে cap-এ নিন (§6.8.8)"]);
+    if(stmGov) notes.push(["inf","governing tie bars pile line-এর উপর band-এ বসান (pile Ø + 2× cover প্রশস্ত), pile centre-এর বাইরে anchor করুন (§I.4.3)"]);
   }
   // group (block) uplift
   if(wt<0 && n>1 && inp.Df>0){
     const up=Pt-2*(Math.abs(Mxs)+Math.abs(Mys));   // indicative; use min pile already captured. keep simple note
   }
-  if(n===n_ax) notes.push(["inf","pile count governed by axial load: (P + cap weight) / Qa"]);
-  else if(n_ax!==null && n>n_ax) notes.push(["inf",`axial load alone would need only ${n_ax} piles — the extra piles resist the base moment / tension`]);
-  if(eff<1) notes.push(["inf","group efficiency "+eff+" applied to Qa"]);
-  notes.push(["inf","sizing uses the service (unfactored) load; thickness, shear and steel use the factored load Pu = "+inp.LF+"·P. Single load case — not a multi-combination envelope."]);
+  if(n===n_ax) notes.push(["inf","pile সংখ্যা axial load দিয়ে নির্ধারিত: (P + cap weight) / Qa"]);
+  else if(n_ax!==null && n>n_ax) notes.push(["inf",`শুধু axial load-এর জন্য ${n_ax} piles লাগত — বাড়তি piles base moment / tension নেয়`]);
+  if(eff<1) notes.push(["inf","Qa-তে group efficiency "+eff+" প্রয়োগ করা হয়েছে"]);
+  notes.push(["inf","sizing service (unfactored) load ব্যবহার করে; thickness, shear ও steel factored load Pu = "+inp.LF+"·P ব্যবহার করে। একটি load case — multi-combination envelope নয়।"]);
 
   const bad=notes.some(x=>x[0]==="bad"), rev=notes.some(x=>x[0]==="rev");
   const verdict=bad?"bad":(rev?"review":"ok");
@@ -644,7 +644,7 @@ function ratioPill(v){
 }
 
 function render(res){
-  const vmap={ok:["ok","OK","All checks satisfied"],review:["review","REVIEW","Design works — see the review notes"],bad:["bad","NOT ADEQUATE","One or more checks fail"]};
+  const vmap={ok:["ok","OK","সব check ঠিক আছে"],review:["review","REVIEW","Design কাজ করছে — review note গুলো দেখুন"],bad:["bad","NOT ADEQUATE","এক বা একাধিক check fail করেছে"]};
   const [vc,vl,vs]=vmap[res.verdict];
   const inch=mm=>(mm/25.4).toFixed(1);
   const barTxt=(n,s,d)=>`${n}–Ø${d} @ ${Math.round(s)} mm`;
@@ -655,7 +655,7 @@ function render(res){
   if(res.n>1){
     checks+=`
     <tr><td>Column two-way (punching) v<sub>u</sub>/φv<sub>c</sub></td><td class="num">incl. γ<sub>v</sub>·M<sub>u</sub></td><td class="num">${ratioPill(res.colPunch)}</td></tr>
-    <tr><td>One-way shear V<sub>u</sub>/φV<sub>c</sub> (at d)</td><td class="num">worst of 4 faces</td><td class="num">${ratioPill(res.oneWay)}</td></tr>
+    <tr><td>One-way shear V<sub>u</sub>/φV<sub>c</sub> (at d)</td><td class="num">4 face-এর worst</td><td class="num">${ratioPill(res.oneWay)}</td></tr>
     <tr><td>Corner/edge pile punching</td><td class="num"></td><td class="num">${ratioPill(res.pilePunch)}</td></tr>`;
     if(stm) checks+=`
     <tr><td>STM strut (bottle, βs 0.60)</td><td class="num"></td><td class="num">${ratioPill(stm.strut)}</td></tr>
@@ -673,32 +673,32 @@ function render(res){
       <span>${vl}</span><span style="font-weight:400;color:inherit;opacity:.85">${vs}</span></div>
 
     <div class="kpis">
-      <div class="kpi"><div class="l">Piles</div><div class="v">${res.n}</div><div class="s">Ø${res.D} mm${res.n_ax!==null&&res.n_ax!==res.n?` · axial min ${res.n_ax}`:""}</div></div>
+      <div class="kpi"><div class="l">Piles</div><div class="v">${res.n}</div><div class="s">Ø${res.D} mm${res.n_ax!==null&&res.n_ax!==res.n?` · axial-এ min ${res.n_ax}`:""}</div></div>
       <div class="kpi"><div class="l">Cap size B × L</div><div class="v">${res.B.toFixed(2)}×${res.L.toFixed(2)} m</div><div class="s">${ftin(res.B)} × ${ftin(res.L)}</div></div>
       <div class="kpi"><div class="l">Thickness h</div><div class="v">${Math.round(res.h)} mm</div><div class="s">${inch(res.h)} in · d ${Math.round(res.d)} mm</div></div>
       <div class="kpi"><div class="l">Max pile load</div><div class="v">${res.wc.toFixed(0)} kN</div><div class="s">min ${res.wt.toFixed(0)} kN (service)</div></div>
     </div>
 
     <div class="figs">
-      <div class="fig"><h4>Plan — cap, piles &amp; column</h4>${planSVG(res)}</div>
-      <div class="fig"><h4>Section (along X)</h4>${elevSVG(res)}</div>
+      <div class="fig"><h4>Plan — cap, piles ও column</h4>${planSVG(res)}</div>
+      <div class="fig"><h4>Section (X বরাবর)</h4>${elevSVG(res)}</div>
     </div>
 
     <div class="secttl">Reinforcement (bottom mat)</div>
     <div class="rebar">
-      <div class="b"><div class="l">Bars along X (spread over L = ${res.L.toFixed(2)} m)</div>
+      <div class="b"><div class="l">X বরাবর bars (L = ${res.L.toFixed(2)} m জুড়ে)</div>
         <div class="v">${barTxt(res.nx,res.sx,res.dbx)}</div>
         <div class="l" style="margin-top:3px">@ ${inch(res.sx)} in · As,req ${Math.round(res.Asx)} mm² · ends: ${res.endx}${res.stmGov.includes("X")?" · STM tie governs":""}</div></div>
-      <div class="b"><div class="l">Bars along Y (spread over B = ${res.B.toFixed(2)} m)</div>
+      <div class="b"><div class="l">Y বরাবর bars (B = ${res.B.toFixed(2)} m জুড়ে)</div>
         <div class="v">${barTxt(res.ny,res.sy,res.dby)}</div>
         <div class="l" style="margin-top:3px">@ ${inch(res.sy)} in · As,req ${Math.round(res.Asy)} mm² · ends: ${res.endy}${res.stmGov.includes("Y")?" · STM tie governs":""}</div></div>
     </div>
 
     <div class="secttl">Design checks</div>
-    <table class="res"><thead><tr><th>Check</th><th class="num">Value</th><th class="num">Ratio</th></tr></thead>
+    <table class="res"><thead><tr><th>Check</th><th class="num">মান</th><th class="num">Ratio</th></tr></thead>
       <tbody>${checks}</tbody></table>
 
-    <div class="secttl">Flexure &amp; quantities</div>
+    <div class="secttl">Flexure ও quantities</div>
     <table class="res"><tbody>
       <tr><td>Factored load P<sub>u</sub></td><td class="num">${res.Pu.toFixed(0)} kN${res.Myu||res.Mxu?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
       <tr><td>Design moment M<sub>u</sub> (X face / Y face)</td><td class="num">${res.Mux.toFixed(0)} / ${res.Muy.toFixed(0)} kN·m</td></tr>
@@ -707,14 +707,14 @@ function render(res){
       <tr><td>Cap concrete volume</td><td class="num">${res.capVol} m³</td></tr>
     </tbody></table>
 
-    <div class="secttl">Notes</div>
+    <div class="secttl">নোট</div>
     <ul class="notes">${notesHtml}</ul>
 
-    <div class="sub">Basis: sizing on unfactored service load (BNBC §2.7); thickness &amp; steel on factored load
+    <div class="sub">Basis: sizing unfactored service load-এ (BNBC §2.7); thickness ও steel factored load-এ
       (ACI 318-14 / BNBC Part 6 Ch.6) — two-way shear §22.6, one-way shear §22.5, flexure §22.2,
       min. steel §24.4.3.2; pile-cap strut-and-tie §13.4 + Appendix I; min. depth §13.4.2.1; cover 75 mm cast
-      against earth §20.6.1.3.1. Rigid-cap pile loads P/n ± M·x/Σx². Preliminary tool — confirm with a detailed
-      model.</div>`;
+      against earth §20.6.1.3.1. Rigid-cap pile load P/n ± M·x/Σx²। Preliminary tool — detailed model দিয়ে
+      নিশ্চিত করুন।</div>`;
 }
 
 /* ------------------------------------- wiring ------------------------------------- */
@@ -741,7 +741,7 @@ function read(){
 }
 function run(){
   try{ render(design(read())); }
-  catch(e){ $("out").innerHTML='<div class="verdict bad"><span class="big">✗</span><span>Input error</span></div><div class="sub">'+e.message+'</div>'; console.error(e); }
+  catch(e){ $("out").innerHTML='<div class="verdict bad"><span class="big">✗</span><span>ইনপুটে সমস্যা</span></div><div class="sub">'+e.message+'</div>'; console.error(e); }
 }
 $("form").addEventListener("input",run);
 $("form").addEventListener("change",run);
