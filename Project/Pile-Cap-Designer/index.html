@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Pile Cap Designer (BNBC-2020)</title>
+<meta name="description" content="Preliminary pile cap design to BNBC-2020 / ACI 318-14: give the pile count and load, get cap size, thickness and rebar. Strut-and-tie per BNBC Appendix I."/>
+<style>
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --ink:#1b2733; --muted:#5a6b7b; --line:#dbe2e8;
+  --brand:#0b5aa2; --brand-2:#0a7d5a; --accent:#c8781a;
+  --ok:#1a7f45; --ok-bg:#e6f4ec; --warn:#9a6a00; --warn-bg:#fdf3d8; --bad:#b4231f; --bad-bg:#fbe7e6;
+  --chip:#eef3f7; --shadow:0 1px 3px rgba(16,36,56,.08),0 6px 18px rgba(16,36,56,.06);
+  --fill:#e9eef3; --stroke:#8aa0b2; --col:#c2cdd6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f141a; --panel:#161d26; --ink:#e7edf3; --muted:#9fb0c0; --line:#28323e;
+    --brand:#4ea3e8; --brand-2:#3fc294; --accent:#e0a24e;
+    --ok:#56c98a; --ok-bg:#15291f; --warn:#e3b24a; --warn-bg:#2a2410; --bad:#f08b86; --bad-bg:#2c1615;
+    --chip:#1d2732; --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35);
+    --fill:#1d2732; --stroke:#5b7488; --col:#33414f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --panel:#161d26; --ink:#e7edf3; --muted:#9fb0c0; --line:#28323e;
+  --brand:#4ea3e8; --brand-2:#3fc294; --accent:#e0a24e;
+  --ok:#56c98a; --ok-bg:#15291f; --warn:#e3b24a; --warn-bg:#2a2410; --bad:#f08b86; --bad-bg:#2c1615;
+  --chip:#1d2732; --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35);
+  --fill:#1d2732; --stroke:#5b7488; --col:#33414f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+a{color:var(--brand)}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
+.title h1{margin:0;font-size:22px;letter-spacing:.2px}
+.title p{margin:4px 0 0;color:var(--muted);font-size:13.5px;max-width:720px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.badge{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--muted)}
+.themebtn{background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:8px 12px;cursor:pointer;font-size:13px;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.card .hd{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:650;display:flex;align-items:center;gap:8px}
+.card .hd .dot{width:9px;height:9px;border-radius:50%;background:var(--brand)}
+.card .bd{padding:14px 16px}
+.inputs{position:sticky;top:12px}
+fieldset{border:1px solid var(--line);border-radius:12px;margin:0 0 12px;padding:10px 12px 12px}
+legend{font-size:12.5px;font-weight:650;color:var(--brand);padding:0 6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.row.one{grid-template-columns:1fr}
+.row.three{grid-template-columns:1fr 1fr 1fr}
+label.f{display:block;font-size:12px;color:var(--muted);margin:6px 0 2px}
+label.f b{color:var(--ink);font-weight:600}
+input[type=number],select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font-size:14px}
+input:focus,select:focus{outline:2px solid color-mix(in srgb,var(--brand) 40%,transparent);border-color:var(--brand)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--bg);color:var(--ink);padding:8px;cursor:pointer;font-size:13px}
+.seg button.on{background:var(--brand);color:#fff;font-weight:600}
+.chk{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:13px;color:var(--ink)}
+.chk input{width:16px;height:16px}
+details.adv{margin-top:4px}
+details.adv>summary{cursor:pointer;font-size:12.5px;color:var(--brand);font-weight:600;list-style:none;padding:4px 0}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv>summary::before{content:"▸ ";}
+details.adv[open]>summary::before{content:"▾ ";}
+.hint{font-size:11.5px;color:var(--muted);margin-top:2px}
+.verdict{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;font-weight:650;margin-bottom:14px;border:1px solid}
+.verdict.ok{background:var(--ok-bg);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,transparent)}
+.verdict.review{background:var(--warn-bg);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.verdict.bad{background:var(--bad-bg);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
+.verdict .big{font-size:18px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:620px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kpi .l{font-size:11.5px;color:var(--muted)}
+.kpi .v{font-size:19px;font-weight:700;margin-top:3px;line-height:1.15}
+.kpi .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:620px){.figs{grid-template-columns:1fr}}
+.fig{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px}
+.fig h4{margin:2px 4px 6px;font-size:12px;color:var(--muted);font-weight:600}
+.fig svg{width:100%;height:auto;display:block}
+table.res{width:100%;border-collapse:collapse;font-size:13px}
+table.res th,table.res td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+table.res th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px}
+table.res td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:650}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.na{background:var(--chip);color:var(--muted)}
+.notes{margin:12px 0 0;padding:0;list-style:none}
+.notes li{padding:8px 11px;border-radius:10px;margin-bottom:7px;font-size:13px;border:1px solid}
+.notes li.n-ok{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.notes li.n-rev{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.notes li.n-bad{background:var(--bad-bg);border-color:color-mix(in srgb,var(--bad) 30%,transparent)}
+.notes li.n-inf{background:var(--bg);border-color:var(--line);color:var(--muted)}
+.sub{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.5}
+.secttl{font-size:12.5px;font-weight:700;color:var(--ink);margin:16px 0 6px;text-transform:uppercase;letter-spacing:.4px}
+.rebar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:620px){.rebar{grid-template-columns:1fr}}
+.rebar .b{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.rebar .b .l{font-size:11.5px;color:var(--muted)}
+.rebar .b .v{font-size:16px;font-weight:700;margin-top:3px}
+.bh{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+.bh th,.bh td{border:1px solid var(--line);padding:3px 5px}
+.bh th{color:var(--muted);font-weight:600;font-size:11px}
+.bh input,.bh select{width:100%;padding:4px 5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font-size:12.5px}
+.bh td.x{width:28px;text-align:center}
+.bh .del{cursor:pointer;color:var(--bad);border:0;background:none;font-size:16px;line-height:1;padding:0}
+.addrow{margin-top:6px;background:var(--chip);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:5px 10px;cursor:pointer;font-size:12.5px}
+.soilout{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.soilout .c{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:12px;color:var(--muted)}
+.soilout .c b{font-size:14px;color:var(--ink)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;font-size:13.5px;font-weight:600}
+.btn.sec{background:var(--chip);color:var(--ink);border:1px solid var(--line)}
+footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <h1>Pile Cap Designer</h1>
+      <p>Preliminary pile-cap design to <b>BNBC-2020 (Part 6)</b> / <b>ACI 318-14</b>. Enter the pile count and the
+      column load — cap plan size, thickness and reinforcement are sized automatically, including a 3-D
+      strut-and-tie check per <b>BNBC Appendix I</b>.</p>
+      <div class="badges">
+        <span class="badge">Sizing: unfactored (service)</span>
+        <span class="badge">Design: factored (strength)</span>
+        <span class="badge">φ 0.75 shear · 0.90 flexure</span>
+        <span class="badge">Rigid cap</span>
+      </div>
+    </div>
+    <button class="themebtn" id="theme">◐ Theme</button>
+  </header>
+
+  <div class="grid">
+    <!-- ------------------------------- INPUTS ------------------------------- -->
+    <form class="card inputs" id="form" autocomplete="off">
+      <div class="hd"><span class="dot"></span>Design input</div>
+      <div class="bd">
+
+        <fieldset>
+          <legend>Pile group &amp; load</legend>
+          <div class="row">
+            <div>
+              <label class="f"><b>Number of piles</b> (group)</label>
+              <select id="n"></select>
+            </div>
+            <div>
+              <label class="f"><b>Pile Ø</b> (mm)</label>
+              <input type="number" id="D" value="500" min="200" max="1500" step="10"/>
+            </div>
+          </div>
+          <label class="chk" style="margin-top:6px"><input type="checkbox" id="tri" checked/> Triangular cap for a
+            3-pile group (saves concrete)</label>
+          <label class="f" style="margin-top:8px">Load cases (unfactored, per column at the cap top)</label>
+          <table class="bh" id="loadtbl">
+            <thead><tr><th>Case</th><th>P (kN)</th><th>Mx (kN·m)</th><th>My (kN·m)</th></tr></thead>
+            <tbody>
+              <tr><td>Dead D</td><td><input type="number" id="D_P" value="2600" step="50"></td><td><input type="number" id="D_Mx" value="0" step="10"></td><td><input type="number" id="D_My" value="0" step="10"></td></tr>
+              <tr><td>Live L</td><td><input type="number" id="L_P" value="1400" step="50"></td><td><input type="number" id="L_Mx" value="0" step="10"></td><td><input type="number" id="L_My" value="0" step="10"></td></tr>
+              <tr><td>Wind W</td><td><input type="number" id="W_P" value="0" step="50"></td><td><input type="number" id="W_Mx" value="0" step="10"></td><td><input type="number" id="W_My" value="0" step="10"></td></tr>
+              <tr><td>Seismic E</td><td><input type="number" id="E_P" value="0" step="50"></td><td><input type="number" id="E_Mx" value="0" step="10"></td><td><input type="number" id="E_My" value="0" step="10"></td></tr>
+            </tbody>
+          </table>
+          <label class="chk" style="margin-top:8px"><input type="checkbox" id="inc33"/> +33% allowable Qa / Qt for
+            W / E (transient) combinations</label>
+          <div class="hint" style="margin-top:4px">Combinations are auto-generated — service (D, D+L, D±0.6W, D±0.7E,
+            D+0.75L±…, 0.6D±…) for the pile check; strength (1.4D, 1.2D+1.6L, 1.2D+1.0L±1.0W/E, 0.9D±1.0W/E) for
+            the cap; W and E taken ±. The worst combination governs. Note: BNBC §3.9.3.2 ties the 33% increase to
+            shallow bearing — apply it to piles only if your geotechnical report allows it.</div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Pile capacity</legend>
+          <div class="seg" id="capmode">
+            <button type="button" data-c="manual" class="on">Manual Qa / Qt</button>
+            <button type="button" data-c="soil">From soil report (SPT)</button>
+          </div>
+          <div id="capManual" class="row" style="margin-top:8px">
+            <div>
+              <label class="f"><b>Allowable compression Qa</b> (kN)</label>
+              <input type="number" id="Qa" value="900" min="10" step="10"/>
+            </div>
+            <div>
+              <label class="f"><b>Allowable uplift Qt</b> (kN)</label>
+              <input type="number" id="Qt" value="200" min="0" step="10"/>
+            </div>
+          </div>
+          <div id="capSoil" style="display:none;margin-top:8px">
+            <div class="row three">
+              <div><label class="f">Pile type</label>
+                <select id="pkind"><option value="bored" selected>bored</option><option value="driven">driven</option></select></div>
+              <div><label class="f">Cut-off (m)</label><input type="number" id="cutoff" value="1.5" min="0" max="40" step="0.5"/></div>
+              <div><label class="f">Pile length L (m)</label><input type="number" id="Lp" value="20" min="6" max="80" step="1"/></div>
+            </div>
+            <div class="row three" style="margin-top:8px">
+              <div><label class="f">FS (SPT)</label><input type="number" id="FSp" value="3.5" min="2.5" max="4" step="0.25"/></div>
+              <div><label class="f">Water table (m)</label><input type="number" id="gw" value="3" min="0" max="80" step="0.5"/></div>
+              <div><label class="f">Lb (tip)</label>
+                <select id="lbmode"><option value="layer" selected>layer</option><option value="granular">granular</option></select></div>
+            </div>
+            <label class="f" style="margin-top:8px">Borehole — one row per layer (Soil: clay / sand / silt; N = N60)</label>
+            <table class="bh"><thead><tr><th>Top</th><th>Bottom</th><th>Soil</th><th>N60</th><th class="x"></th></tr></thead>
+              <tbody id="bhbody"></tbody></table>
+            <button type="button" class="addrow" id="addrow">+ Add layer</button>
+            <div class="soilout" id="soilout"></div>
+            <div class="hint" style="margin-top:6px">BNBC §3.10 SPT method: layer-wise skin friction + end bearing
+              from N60, Qult = Qs + Qb − W, FS 3.5 and the 1.5/3.0 partial-factor check (smaller governs). Pile Ø
+              is taken from the field above. Uplift Qt = (0.7·Qs + W)/FS. Qa / Qt feed the design automatically.</div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Column &amp; materials</legend>
+          <div class="row">
+            <div>
+              <label class="f"><b>Column c1</b> ∥X (mm)</label>
+              <input type="number" id="c1" value="500" min="200" max="3000" step="25"/>
+            </div>
+            <div>
+              <label class="f"><b>Column c2</b> ∥Y (mm)</label>
+              <input type="number" id="c2" value="500" min="200" max="3000" step="25"/>
+            </div>
+          </div>
+          <div class="row three" style="margin-top:8px">
+            <div>
+              <label class="f"><b>f′c</b> (MPa)</label>
+              <input type="number" id="fc" value="28" min="17" max="50" step="1"/>
+            </div>
+            <div>
+              <label class="f"><b>fy</b> (MPa)</label>
+              <input type="number" id="fy" value="420" min="275" max="550" step="5"/>
+            </div>
+            <div>
+              <label class="f"><b>Main bar Ø</b> (mm)</label>
+              <select id="db">
+                <option>12</option><option>16</option><option selected>20</option><option>25</option><option>28</option><option>32</option>
+              </select>
+            </div>
+          </div>
+          <label class="chk" style="margin-top:8px"><input type="checkbox" id="autobar"/> Auto-increase bar Ø if
+            spacing gets too tight (off = use exactly the Ø selected above)</label>
+        </fieldset>
+
+        <details class="adv">
+          <summary>Geometry &amp; self-weight (advanced)</summary>
+          <fieldset style="margin-top:8px">
+            <div class="row">
+              <div>
+                <label class="f">Pile spacing (× Ø)</label>
+                <input type="number" id="sf" value="3.0" min="2.5" max="5" step="0.25"/>
+              </div>
+              <div>
+                <label class="f">Pile centre → cap edge (mm)</label>
+                <input type="number" id="edge" value="400" min="150" max="900" step="25"/>
+              </div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <div>
+                <label class="f">Min. cap thickness (mm)</label>
+                <input type="number" id="hmin" value="600" min="450" max="2000" step="25"/>
+              </div>
+              <div>
+                <label class="f">Group efficiency</label>
+                <input type="number" id="eff" value="1.0" min="0.5" max="1" step="0.05"/>
+              </div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <div>
+                <label class="f">Founding depth Df (m)</label>
+                <input type="number" id="Df" value="1.5" min="0" max="20" step="0.25"/>
+              </div>
+              <div>
+                <label class="f">γ cap+backfill (kN/m³)</label>
+                <input type="number" id="gavg" value="20" min="0" max="26" step="0.5"/>
+              </div>
+            </div>
+            <div class="hint" style="margin-top:6px">Cap + backfill weight = γ·Df·area, added to P for the pile-load
+              check only (BNBC §2.7). Set Df = 0 to ignore.</div>
+            <label class="chk"><input type="checkbox" id="tiem"/> Tie / grade beams take column base moments
+              (piles carry axial only)</label>
+            <div class="row" style="margin-top:8px">
+              <div><label class="f">Pile length, for quantities (m)</label><input type="number" id="pileLen" value="20" min="3" max="80" step="1"/></div>
+              <div><label class="f">Currency label</label><input type="text" id="cur" value="৳" maxlength="4"/></div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <div><label class="f">Steel rate (per kg · 0 = skip)</label><input type="number" id="rateSteel" value="0" min="0" step="1"/></div>
+              <div><label class="f">Concrete rate (per m³ · 0 = skip)</label><input type="number" id="rateConc" value="0" min="0" step="100"/></div>
+            </div>
+          </fieldset>
+        </details>
+        <div class="hint" style="margin-top:4px">Effective cover in the cap is fixed at 150 mm (75 mm pile
+          embedment + 75 mm cover, cast against earth, BNBC §20.6.1.3.1).</div>
+      </div>
+    </form>
+
+    <!-- ------------------------------- RESULTS ------------------------------- -->
+    <section class="card">
+      <div class="hd"><span class="dot" style="background:var(--brand-2)"></span>Result</div>
+      <div class="bd" id="out"></div>
+    </section>
+  </div>
+
+  <footer>
+    Preliminary design — rigid-cap assumption, single load case. Verify punching at edge/corner conditions, pile
+    structural capacity, group action, settlement and grade beams with a detailed model before issuing drawings.
+    <br/>Part of the <a href="../../">Structural Engineering</a> portfolio · BNBC-2020 / ACI 318-14.
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* =======================================================================================
+   Faithful JS port of the pile-cap engine in etabs_dashboard/foundation.py (+ units.py).
+   SI throughout: kN, m, kPa, MPa, mm. Code basis in the comments mirrors the Python source.
+   ======================================================================================= */
+const IN = 25.4, FT = 0.3048;                       // mm, m
+const PHI_STM = 0.75, BETA_S_BOTTLE = 0.60;         // BNBC §6.2.3.2.6 / §I.3.2.2(b)
+const BETA_N = {CCC:1.0, CCT:0.80, CTT:0.60};       // §I.5.2.1–I.5.2.3
+const THETA_MIN = 25.0;                             // §I.2.5
+const LAYOUTS = [1,2,3,4,5,6,7,8,9,12,16];
+
+const r6 = x => Math.round(x*1e6)/1e6;
+const rnd = (x,n)=>{const f=Math.pow(10,n);return Math.round(x*f)/f;};
+const hypot = Math.hypot, sqrt = Math.sqrt, PI = Math.PI;
+
+function ceil_to(x, step){ return rnd(Math.ceil(r6(x/step))*step, 4); }
+function ceil_in(mm, step=1.0){ return rnd(Math.ceil(r6(mm/(step*IN)))*step*IN, 2); }
+function floor_in(mm, step=0.5){ return rnd(Math.floor(r6(mm/(step*IN)))*step*IN, 2); }
+function bar_area(db){ return PI*db*db/4; }
+function ftin(m){
+  let inch=m/0.0254, ft=Math.floor(inch/12), i=Math.round(inch-12*ft);
+  if(i===12){ft+=1;i=0;} return ft+"'-"+i+'"';
+}
+
+/* standard pile groups (m) about the cap centre, spacing s --------------------------- */
+function pile_layout(n, s){
+  const L={
+    1:[[0,0]],
+    2:[[-s/2,0],[s/2,0]],
+    3:[[-s/2,-s*Math.sqrt(3)/6],[s/2,-s*Math.sqrt(3)/6],[0,s*Math.sqrt(3)/3]],
+    4:[[-s/2,-s/2],[s/2,-s/2],[-s/2,s/2],[s/2,s/2]],
+    6:[], 8:[], 9:[], 12:[], 16:[]
+  };
+  for(const x of [-s,0,s]) for(const y of [-s/2,s/2]) L[6].push([x,y]);
+  for(const x of [-1.5*s,-0.5*s,0.5*s,1.5*s]) for(const y of [-s/2,s/2]) L[8].push([x,y]);
+  for(const x of [-s,0,s]) for(const y of [-s,0,s]) L[9].push([x,y]);
+  for(const x of [-1.5*s,-0.5*s,0.5*s,1.5*s]) for(const y of [-s,0,s]) L[12].push([x,y]);
+  for(const x of [-1.5*s,-0.5*s,0.5*s,1.5*s]) for(const y of [-1.5*s,-0.5*s,0.5*s,1.5*s]) L[16].push([x,y]);
+  if(n===7){ L[7]=[[0,0]]; for(let a=0;a<360;a+=60) L[7].push([s*Math.cos(a*PI/180), s*Math.sin(a*PI/180)]); }
+  if(n===5){ const q=s/Math.SQRT2; L[5]=[[-q,-q],[q,-q],[-q,q],[q,q],[0,0]]; }
+  return L[n];
+}
+
+/* ---- column two-way (punching) ratio, interior 4-sided section incl. γv·Mu (ACI 22.6+8.4.4.2) ---- */
+function punching_ratio_interior(fc,c1,c2,d,Pu,Mx,My){     // c1,c2,d in mm; Pu kN; Mx,My kN·m
+  const lx=c1+d, ly=c2+d, b0=2*(lx+ly);
+  const xl=-lx/2, yt=ly/2;
+  let Jx=0, Jy=0;
+  // two horizontal segs (len lx at y=±ly/2) + two vertical segs (len ly at x=±lx/2); centroid at (0,0)
+  Jx += 2*(d*Math.pow(lx,3)/12 + lx*Math.pow(d,3)/12);     // horizontal contribute to Jx (My)
+  Jy += 2*(lx*d*Math.pow(yt,2));                           // horizontal → Jy (Mx) via lever
+  Jy += 2*(d*Math.pow(ly,3)/12 + ly*Math.pow(d,3)/12);     // vertical contribute to Jy (Mx)
+  Jx += 2*(ly*d*Math.pow(xl,2));                           // vertical → Jx (My) via lever
+  const cx=lx/2, cy=ly/2;
+  const gvx=1-1/(1+2/3*sqrt(lx/ly));
+  const gvy=1-1/(1+2/3*sqrt(ly/lx));
+  const Vu=Math.max(Pu,0);
+  let vu=Vu*1e3/(b0*d);
+  if(Jx>0) vu += gvx*Math.abs(My)*1e6*cx/Jx;
+  if(Jy>0) vu += gvy*Math.abs(Mx)*1e6*cy/Jy;
+  const alpha_s=40, beta=Math.max(c1,c2)/Math.max(Math.min(c1,c2),1), sq=sqrt(fc);
+  const vc=Math.min(0.33*sq, 0.17*(1+2/beta)*sq, 0.083*(2+alpha_s*d/b0)*sq);
+  return vu/(0.75*vc);
+}
+
+function as_flexure(Mu,b,d,fc,fy){                         // Mu kN·m, b,d mm → As mm² (φ=0.9)
+  const Mu_n=Mu*1e6/0.9;
+  if(Mu_n<=0) return 0;
+  const k=0.85*fc*b, disc=d*d-2*Mu_n/k;
+  if(disc<0) return Infinity;
+  const a=d-sqrt(disc);
+  const beta1=Math.min(0.85,Math.max(0.65,0.85-0.05*(fc-28)/7));
+  if(a/beta1>0.375*d+1e-9) return Infinity;                // not tension-controlled (ACI 21.2.2)
+  return k*a/fy;
+}
+function as_min(b,h,fy){ return (fy<400?0.0020:Math.max(0.0018*420/fy,0.0014))*b*h; }
+
+function bars(As_req,width_mm,db,h,cover=75){
+  let n=Math.max(2, Math.ceil(As_req/bar_area(db)-1e-9));
+  const smax=Math.min(3*h,450), clear_w=width_mm-2*cover;
+  n=Math.max(n, Math.ceil(clear_w/smax)+1);
+  let s=clear_w/(n-1);
+  let s_round=Math.max(floor_in(s,0.5), IN/2);
+  n=Math.max(n, Math.ceil(r6(clear_w/s_round))+1);
+  return [n, s_round];
+}
+function bars_fit(As_req,width_mm,db,h,cover=75,sizes=[12,16,20,25,28,32]){
+  const list=[db].concat(sizes.filter(x=>x>db));
+  let n,s_,d_;
+  for(d_ of list){ [n,s_]=bars(As_req,width_mm,d_,h,cover); if(s_-d_>=Math.max(75,2*d_)||d_===sizes[sizes.length-1]) return [n,s_,d_]; }
+  return [n,s_,d_];
+}
+function anchorage(proj_m,db,fy,fc,cover=75){
+  const ld=Math.max(fy/(db<20?2.1:1.7)/sqrt(fc)*db, 300);
+  const ldh=Math.max(0.24*0.7*fy/sqrt(fc)*db, 8*db, 150);
+  const avail=proj_m*1000-cover;
+  if(ld<=avail) return ["straight",ld,ldh];
+  if(ldh<=avail) return ["90° hooks",ld,ldh];
+  return ["NOT ENOUGH",ld,ldh];
+}
+
+/* ---- 3-D strut-and-tie check (BNBC Appendix I) for one set of factored pile reactions R ---- */
+function stm_pile_cap(pts,R,c1,c2,d,fc,fy,D,wt=0){        // c1,c2,D in m; d,wt in mm; R kN
+  let z=0.9*d;
+  const Ap=PI*Math.pow(D*1000,2)/4;
+  const twoWay = (new Set(pts.map(p=>rnd(p[0],3))).size>1) && (new Set(pts.map(p=>rnd(p[1],3))).size>1);
+  const bn_pile = twoWay?BETA_N.CTT:BETA_N.CCT;
+  let out=null, rows=[];
+  for(let it=0;it<30;it++){
+    rows=[];
+    for(let k=0;k<pts.length;k++){
+      const x=pts[k][0], y=pts[k][1], r=R[k];
+      if(Math.abs(x)<=c1/2+1e-9 && Math.abs(y)<=c2/2+1e-9){ rows.push([x,y,r,null,0,0]); continue; }
+      const xt=Math.abs(x)>c1/2?Math.sign(x)*c1/4:0;
+      const yt=Math.abs(y)>c2/2?Math.sign(y)*c2/4:0;
+      const lx=x-xt, ly=y-yt, l_=hypot(lx,ly)*1000;
+      const th=Math.atan2(z,l_)*180/PI;
+      const hx=Math.max(r,0)*lx*1000/z, hy=Math.max(r,0)*ly*1000/z;
+      rows.push([x,y,r,th,hx,hy]);
+    }
+    const sum=(f)=>rows.reduce((a,row)=>a+f(row),0);
+    const tx=Math.max(sum(ro=>ro[4]>0?ro[4]:0), sum(ro=>ro[4]<0?-ro[4]:0), 0);
+    const ty=Math.max(sum(ro=>ro[5]>0?ro[5]:0), sum(ro=>ro[5]<0?-ro[5]:0), 0);
+    const a=Math.max(tx?tx*1000/(PHI_STM*0.85*BETA_N.CCC*fc*c2*1000):0,
+                     ty?ty*1000/(PHI_STM*0.85*BETA_N.CCC*fc*c1*1000):0);
+    const z_new=Math.max(d-a/2, 0.3*d);
+    out={z,a,Tx:tx,Ty:ty,rows};
+    if(Math.abs(z_new-z)<0.5) break;
+    z=z_new;
+  }
+  rows=out.rows;
+  const struts=rows.filter(ro=>ro[3]!==null && ro[2]>0);
+  const th_min=struts.length?Math.min(...struts.map(ro=>ro[3])):90;
+  let worst=0;
+  for(const ro of struts){
+    const th=ro[3], r=ro[2], sn=Math.sin(th*PI/180), cs=Math.cos(th*PI/180);
+    const F=r/sn, Acs=PI/4*(D*1000)*(D*1000*sn+wt*cs);
+    const cap_=PHI_STM*0.85*Math.min(BETA_S_BOTTLE,bn_pile)*fc*Acs/1000;
+    worst=Math.max(worst,F/cap_);
+  }
+  const rmax=rows.length?Math.max(...rows.map(ro=>ro[2])):0;
+  const bear=rmax/(PHI_STM*0.85*bn_pile*fc*Ap/1000);
+  const Pu=rows.reduce((a,ro)=>a+Math.max(ro[2],0),0);
+  const col_node=Pu/(PHI_STM*0.85*BETA_N.CCC*fc*c1*c2*1e6/1000);
+  return {z:rnd(out.z,1), th_min:rnd(th_min,1), Tx:rnd(out.Tx,1), Ty:rnd(out.Ty,1),
+    AsTx:Math.round(out.Tx*1000/(PHI_STM*fy)), AsTy:Math.round(out.Ty*1000/(PHI_STM*fy)),
+    strut:rnd(worst,3), pileNode:rnd(bear,3), colNode:rnd(col_node,3), bn:bn_pile,
+    ok: th_min>=THETA_MIN-1e-9 && worst<=1 && bear<=1};
+}
+
+/* ---- BNBC/ACI load combinations from the D/L/W/E cases (W, E taken ±) ---- */
+function COMBOS(LD){
+  const zero=o=>(Math.abs(o.P)+Math.abs(o.Mx)+Math.abs(o.My))<1e-9;
+  const hasW=!zero(LD.W), hasE=!zero(LD.E);
+  const c=(name,cD,cL,cW,cE,lat)=>({name,
+    P:cD*LD.D.P+cL*LD.L.P+cW*LD.W.P+cE*LD.E.P,
+    Mx:cD*LD.D.Mx+cL*LD.L.Mx+cW*LD.W.Mx+cE*LD.E.Mx,
+    My:cD*LD.D.My+cL*LD.L.My+cW*LD.W.My+cE*LD.E.My, lat, dfac:cD});
+  const asd=[c("D",1,0,0,0,false), c("D+L",1,1,0,0,false)];
+  if(hasW) asd.push(c("D+0.6W",1,0,0.6,0,true),c("D−0.6W",1,0,-0.6,0,true),
+    c("D+0.75L+0.45W",1,0.75,0.45,0,true),c("D+0.75L−0.45W",1,0.75,-0.45,0,true),
+    c("0.6D+0.6W",0.6,0,0.6,0,true),c("0.6D−0.6W",0.6,0,-0.6,0,true));
+  if(hasE) asd.push(c("D+0.7E",1,0,0,0.7,true),c("D−0.7E",1,0,0,-0.7,true),
+    c("D+0.75L+0.525E",1,0.75,0,0.525,true),c("D+0.75L−0.525E",1,0.75,0,-0.525,true),
+    c("0.6D+0.7E",0.6,0,0,0.7,true),c("0.6D−0.7E",0.6,0,0,-0.7,true));
+  const str=[c("1.4D",1.4,0,0,0,false), c("1.2D+1.6L",1.2,1.6,0,0,false)];
+  if(hasW) str.push(c("1.2D+1.0L+1.0W",1.2,1.0,1.0,0,true),c("1.2D+1.0L−1.0W",1.2,1.0,-1.0,0,true),
+    c("0.9D+1.0W",0.9,0,1.0,0,true),c("0.9D−1.0W",0.9,0,-1.0,0,true));
+  if(hasE) str.push(c("1.2D+1.0L+1.0E",1.2,1.0,0,1.0,true),c("1.2D+1.0L−1.0E",1.2,1.0,0,-1.0,true),
+    c("0.9D+1.0E",0.9,0,0,1.0,true),c("0.9D−1.0E",0.9,0,0,-1.0,true));
+  return {asd,str,hasW,hasE};
+}
+function _stmEnvJS(env,t){
+  if(!env) return Object.assign({},t);
+  const o=Object.assign({},env);
+  for(const k of ["Tx","Ty","AsTx","AsTy","strut","pileNode","colNode"]) o[k]=Math.max(env[k],t[k]);
+  o.th_min=Math.min(env.th_min,t.th_min); o.z=Math.min(env.z,t.z); o.ok=env.ok&&t.ok; o.bn=t.bn;
+  return o;
+}
+
+/* ------------------------------------- main design ------------------------------------- */
+function design(inp){
+  const D=inp.D/1000;                                  // m
+  const eff=inp.eff, Qa=inp.Qa*eff, Qt=inp.Qt;
+  const s=inp.sf*D;
+  const edge=Math.max(inp.edge/1000, D/2+0.10);        // ≥100 mm beyond pile side (§3.10.1.20)
+  const fc=inp.fc, fy=inp.fy, db=inp.db;
+  const c1=inp.c1/1000, c2=inp.c2/1000, Dm=inp.D;
+  const gammaW=inp.gavg*inp.Df;                        // γ·Df (kN/m² of plan)
+  const wself=(A)=>gammaW*A;
+  const notes=[];
+
+  // load cases → combinations; tie beams option zeroes all moments (piles axial only)
+  const LD=JSON.parse(JSON.stringify(inp.loads));
+  if(inp.tiem){ for(const k of ["D","L","W","E"]){ LD[k].Mx=0; LD[k].My=0; } }
+  const {asd,str,hasW,hasE}=COMBOS(LD);
+  const f33=c=>(c.lat && inp.inc33)?1.33:1.0;          // optional +33% allowable for W/E combos
+  const Pgrav=LD.D.P+LD.L.P;                           // service gravity for the count hint
+
+  // smallest standard group for gravity axial alone (reference hint)
+  let n_ax=null;
+  for(const nn of LAYOUTS){
+    const pl=pile_layout(nn,s), xs=pl.map(p=>p[0]), ys=pl.map(p=>p[1]);
+    const A0=ceil_to(Math.max(...xs)-Math.min(...xs)+2*edge,3*IN/1000)*ceil_to(Math.max(...ys)-Math.min(...ys)+2*edge,3*IN/1000);
+    if((Pgrav+wself(A0))/nn<=Qa){ n_ax=nn; break; }
+  }
+
+  const n=inp.n;
+  const tri=(n===3 && inp.tri);                        // triangular cap option for a 3-pile group
+  const pts=pile_layout(n,s);
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const Sx2=pts.reduce((a,p)=>a+p[0]*p[0],0), Sy2=pts.reduce((a,p)=>a+p[1]*p[1],0);
+  const Sx2e=Sx2||1e-9, Sy2e=Sy2||1e-9;
+  const B=ceil_to(Math.max(...xs)-Math.min(...xs)+2*edge,3*IN/1000);
+  const L=ceil_to(Math.max(...ys)-Math.min(...ys)+2*edge,3*IN/1000);
+  // rectangular cap is centred on the pile bounding box (every pile keeps its edge distance — fixes 3-pile);
+  // the triangular cap is centred on the centroid (equilateral)
+  const cxo=tri?0:(Math.max(...xs)+Math.min(...xs))/2, cyo=tri?0:(Math.max(...ys)+Math.min(...ys))/2;
+
+  // instability: a single line of piles cannot resist a moment across the line
+  const anyMx=[...asd,...str].some(c=>Math.abs(c.Mx)>1e-6), anyMy=[...asd,...str].some(c=>Math.abs(c.My)>1e-6);
+  const unstable=(Sx2<1e-9&&anyMy)||(Sy2<1e-9&&anyMx);
+  if(unstable) notes.push(["bad","NOT ADEQUATE: "+n+" pile(s) in a line cannot resist the base moment — add a pile line, or let tie/grade beams take the moment (advanced option)"]);
+
+  // ---- sizing: envelope the service (ASD) combinations ----
+  let wc=-1e9, wt=1e9, govC=null, govT=null, compUtil=0, upUtil=0, compFail=null, upFail=null;
+  for(const c of asd){
+    const Pt=c.P + wself(B*L)*c.dfac;                  // cap+backfill weight scaled by the combo's D factor
+    const QaC=Qa*f33(c), QtC=Qt*f33(c);
+    for(const [x,y] of pts){
+      const mTerm=Math.abs(c.My)*Math.abs(x)/Sx2e + Math.abs(c.Mx)*Math.abs(y)/Sy2e;
+      const Pi=Pt/n+mTerm, Pmin=Pt/n-mTerm;
+      if(Pi>wc){ wc=Pi; govC=c.name; }
+      if(Pmin<wt){ wt=Pmin; govT=c.name; }
+      const u=QaC>0?Pi/QaC:Infinity; if(u>compUtil){ compUtil=u; if(u>1&&!compFail) compFail=c.name; }
+      const ut=Pmin<0?(QtC>0?(-Pmin)/QtC:Infinity):0; if(ut>upUtil){ upUtil=ut; if(ut>1&&!upFail) upFail=c.name; }
+    }
+  }
+  const pileComp_ok=compUtil<=1+1e-6, pileUp_ok=upUtil<=1+1e-6;
+
+  const cov=150;                                       // 75 embedment + 75 cover
+  const wt_stm=db+2*75.0;
+  const reactions=c=>pts.map(([x,y])=>c.P/n + c.My*x/Sx2e - c.Mx*y/Sy2e);
+  function face_sum(R,axis,sign,offset){               // Σ reactions beyond a section (ACI 13.4.2.5 linear)
+    let tot=0,mom=0;
+    for(let k=0;k<pts.length;k++){
+      const u=(axis==="x"?pts[k][0]:pts[k][1])*sign;
+      const f=Math.min(Math.max((u-offset)/D+0.5,0),1);
+      tot+=f*R[k];
+      mom+=R[k]*Math.max(u-(axis==="x"?c1:c2)/2,0);
+    }
+    return [tot,mom];
+  }
+
+  // ---- strength: envelope the factored combinations at each thickness ----
+  function checkAt(h){
+    const d=h-cov-db;
+    let ok=true, why="", Mux=0, Muy=0, MuxT=0, MuyT=0, govStr=null, worstR=0;
+    const det={colPunch:0, oneWay:0, pilePunch:0};
+    let stm=null;
+    for(const c of str){
+      const R=reactions(c);
+      let cmax=0;
+      if(n>1){
+        let inside=0;
+        for(let k=0;k<pts.length;k++){ const x=pts[k][0], y=pts[k][1];
+          if(Math.abs(x)*1000<(inp.c1+d)/2 && Math.abs(y)*1000<(inp.c2+d)/2) inside+=R[k]; }
+        const cp=punching_ratio_interior(fc,inp.c1,inp.c2,d,Math.max(c.P-inside,0),c.Mx,c.My);
+        det.colPunch=Math.max(det.colPunch,cp); cmax=Math.max(cmax,cp);
+        if(cp>1){ ok=false; why="column two-way (punching) shear"; }
+      }
+      for(const [axis,sign] of [["x",1],["x",-1],["y",1],["y",-1]]){
+        const half=(axis==="x"?c1:c2)/2;
+        const [V]=face_sum(R,axis,sign,half+d/1000);
+        const [,Mf]=face_sum(R,axis,sign,half);
+        const width=(axis==="x"?L:B)*1000, phiV=0.75*0.17*sqrt(fc)*width*d/1000;
+        const rr=phiV>0?V/phiV:0; det.oneWay=Math.max(det.oneWay,rr); cmax=Math.max(cmax,rr);
+        if(V>phiV){ ok=false; why="one-way shear at d from the column face"; }
+        if(axis==="x"){ Mux=Math.max(Mux,Mf); MuxT=Math.max(MuxT,-Mf); }
+        else { Muy=Math.max(Muy,Mf); MuyT=Math.max(MuyT,-Mf); }
+      }
+      for(let k=0;k<pts.length;k++){
+        const x=pts[k][0], y=pts[k][1], rp=R[k];
+        if(Math.abs(x)*1000<inp.c1/2 && Math.abs(y)*1000<inp.c2/2) continue;
+        const ex_=B/2-Math.abs(x), ey_=L/2-Math.abs(y);
+        let b0;
+        if(ex_*1000<Dm/2+d && ey_*1000<Dm/2+d) b0=PI*(Dm+d)/4+ex_*1000+ey_*1000;
+        else if(Math.min(ex_,ey_)*1000<Dm/2+d) b0=PI*(Dm+d)/2+2*Math.min(ex_,ey_)*1000;
+        else b0=PI*(Dm+d);
+        const vc=Math.min(0.33,0.083*(2+20*d/b0))*sqrt(fc), phi=0.75*vc*b0*d/1000;
+        const rr=phi>0?rp/phi:0; det.pilePunch=Math.max(det.pilePunch,rr); cmax=Math.max(cmax,rr);
+        if(rp>phi){ ok=false; why="pile punching (corner/edge pile)"; }
+      }
+      if(n>1){
+        const stmc=stm_pile_cap(pts,R,c1,c2,d,fc,fy,D,wt_stm);
+        stm=_stmEnvJS(stm,stmc); cmax=Math.max(cmax,stmc.strut,stmc.pileNode);
+        if(!stmc.ok){ ok=false; why=(stmc.th_min<THETA_MIN)?"strut angle < 25° (§I.2.5)":"strut / pile-node stress (§I.3, I.5)"; }
+      }
+      if(cmax>worstR){ worstR=cmax; govStr=c.name; }
+    }
+    let Asx=as_flexure(Mux,L*1000,d,fc,fy), Asy=as_flexure(Muy,B*1000,d,fc,fy);
+    if(!isFinite(Asx)||!isFinite(Asy)){ ok=false; why="flexure (section too shallow)"; }
+    return {d,ok,why,Mux,Muy,MuxT,MuyT,Asx,Asy,stm,det,govStr};
+  }
+
+  let h=ceil_in(Math.max(inp.hmin,600,300+cov+db));
+  let r=checkAt(h);
+  while(!r.ok && h<=3000){ h+=IN; r=checkAt(h); }
+
+  const d=r.d;
+  // bar selection: fixed Ø (user-selected, default) or auto-upsize when the spacing gets too tight
+  function pick(As,width){
+    if(inp.autobar){ const [n_,s_,d_]=bars_fit(As,width,db,h,75); return {n:n_,s:s_,db:d_,tight:false}; }
+    const [n_,s_]=bars(As,width,db,h,75);
+    return {n:n_,s:s_,db:db,tight:(s_-db < Math.max(75,2*db)-1e-6)};
+  }
+  // bottom mat = max(flexure, min steel, STM ties)
+  let Asx=Math.max(isFinite(r.Asx)?r.Asx:0, as_min(L*1000,h,fy));
+  let Asy=Math.max(isFinite(r.Asy)?r.Asy:0, as_min(B*1000,h,fy));
+  let stmGov="";
+  if(r.stm){
+    if(r.stm.AsTx>Asx){ Asx=r.stm.AsTx; stmGov="X"; }
+    if(r.stm.AsTy>Asy){ Asy=r.stm.AsTy; stmGov+="Y"; }
+  }
+  const bx=pick(Asx,L*1000), by=pick(Asy,B*1000);
+  const nx=bx.n,sx=bx.s,dbx=bx.db, ny=by.n,sy=by.s,dby=by.db;
+  // top mat = max(hogging flexure, min steel) each way (nominal top mesh, or tension where piles uplift)
+  let AsxTop=as_flexure(r.MuxT,L*1000,d,fc,fy); AsxTop=Math.max(isFinite(AsxTop)?AsxTop:0, as_min(L*1000,h,fy));
+  let AsyTop=as_flexure(r.MuyT,B*1000,d,fc,fy); AsyTop=Math.max(isFinite(AsyTop)?AsyTop:0, as_min(B*1000,h,fy));
+  const txb=pick(AsxTop,L*1000), tyb=pick(AsyTop,B*1000);
+  let [endx]=anchorage((B-c1)/2,dbx,fy,fc,75);
+  let [endy]=anchorage((L-c2)/2,dby,fy,fc,75);
+  if(r.Mux<1 && endx==="NOT ENOUGH") endx="90° hooks (min. steel)";
+  if(r.Muy<1 && endy==="NOT ENOUGH") endy="90° hooks (min. steel)";
+
+  const govStrC = str.find(c=>c.name===r.govStr) || str[1] || str[0];
+
+  // ---- cap shape & quantities ----
+  const triR = tri ? (s/Math.sqrt(3) + 2*edge) : null;        // cap circumradius (equilateral)
+  const capArea = tri ? (3*Math.sqrt(3)/4*triR*triR) : (B*L);
+  const capVol = rnd(capArea*h/1000, 2);
+  const pileLen = inp.pileLen||20, pilesVol = rnd(n*PI*D*D/4*pileLen, 2);
+  // bar bending schedule (approximate lengths, straight + 90° hooks where developed by hooks)
+  const barWtM = dd=>0.0061654*dd*dd;                         // kg per m (ρ 7850)
+  const bbsRow=(label,nb,dim,dd,hooked)=>{
+    const straight=dim*1000-2*75, hook=hooked?2*Math.max(12*dd,150):0;
+    const len=Math.ceil((straight+hook)/25)*25, tot=nb*len/1000;
+    return {label,n:nb,db:dd,len,tot:rnd(tot,1),wt:rnd(tot*barWtM(dd),1)};
+  };
+  const hookX=/hook|NOT/i.test(endx), hookY=/hook|NOT/i.test(endy);
+  const bbs=[ bbsRow("Bottom X",nx,B,dbx,hookX), bbsRow("Bottom Y",ny,L,dby,hookY),
+              bbsRow("Top X",txb.n,B,txb.db,true), bbsRow("Top Y",tyb.n,L,tyb.db,true) ];
+  const steelWt=rnd(bbs.reduce((a,b)=>a+b.wt,0),1);
+  const rS=inp.rateSteel||0, rC=inp.rateConc||0;
+  const cost = (rS>0||rC>0) ? rnd(steelWt*rS + (capVol+pilesVol)*rC, 0) : null;
+  if(tri) notes.push(["inf","triangular 3-pile cap: concrete on the triangle ("+rnd(capArea,2)+" m²); structural checks and the bar schedule use the bounding rectangle (conservative) — detail the triangular bar layout to suit"]);
+
+  // notes & verdict
+  if(!r.ok) notes.push(["bad","NOT ADEQUATE: "+r.why+" not satisfied at h = 3000 mm (governing combo "+(r.govStr||"—")+") — larger / more piles or a raft"]);
+  if(endx==="NOT ENOUGH"||endy==="NOT ENOUGH") notes.push(["bad","NOT ADEQUATE: cap bars cannot be developed beyond the column face — larger cap or smaller bars"]);
+  if(!pileComp_ok) notes.push(["bad","NOT ADEQUATE: pile compression over allowable (util "+compUtil.toFixed(2)+") in combo "+compFail+" — max pile "+wc.toFixed(0)+" kN"+(n_ax&&n_ax>n?` — try ${n_ax} piles`:(n_ax===null?" — even 16 piles overloaded, use larger piles":""))]);
+  if(!pileUp_ok) notes.push(["bad","NOT ADEQUATE: pile tension over Qt (util "+upUtil.toFixed(2)+") in combo "+upFail+" — min pile "+wt.toFixed(0)+" kN (uplift)"]);
+  else if(wt<0) notes.push(["rev","pile tension "+(-wt).toFixed(0)+" kN ≤ Qt (combo "+govT+") — reinforce the pile for tension and anchor its bars into the cap"]);
+  if(inp.tiem) notes.push(["inf","tie/grade beams assumed to take the column base moments — piles designed for axial load only"]);
+  if(n>1 && r.stm){
+    notes.push(["inf","strut-and-tie (BNBC App. I): θmin "+r.stm.th_min+"° (≥25°), bottle strut βs 0.60, pile-node βn "+r.stm.bn+"; bottom bars = max(flexure, STM ties"+(stmGov?` — ties govern ${stmGov}`:"")+")"]);
+    if(r.stm.colNode>1) notes.push(["rev","REVIEW: column-node bearing "+r.stm.colNode.toFixed(2)+"× φ·0.85·f′c(cap) — carry the excess with column dowels into the cap (§6.8.8)"]);
+    if(stmGov) notes.push(["inf","place the governing tie bars in bands over the pile lines (pile Ø + 2× cover wide), anchored beyond the pile centres (§I.4.3)"]);
+  }
+  if(bx.tight||by.tight) notes.push(["rev",`REVIEW: bottom bars at the selected Ø${db} give clear spacing < max(75, 2Ø) — use two layers, a larger cap, a larger Ø, or tick "auto-increase bar Ø"`]);
+  if(r.MuxT>1||r.MuyT>1) notes.push(["inf","top mat designed for hogging (piles in tension / cantilever): Mu top X "+r.MuxT.toFixed(0)+" / Y "+r.MuyT.toFixed(0)+" kN·m"]);
+  else notes.push(["inf","top mat = minimum steel (nominal top mesh) — no hogging from these combinations"]);
+  if(inp.soil) notes.push(["inf","Qa "+inp.Qa.toFixed(0)+" / Qt "+inp.Qt.toFixed(0)+" kN from the SPT soil report (§3.10): "+(inp.soil.kind||inp.pkind)+" pile Ø"+inp.D+" mm, L "+inp.soil.L+" m, tip "+inp.soil.tip+" m in "+inp.soil.soil_t+" (N "+inp.soil.Nt+"); Qs "+inp.soil.Qs.toFixed(0)+", Qb "+inp.soil.Qb.toFixed(0)+", W "+inp.soil.W.toFixed(0)+" kN"]);
+  if(n===n_ax) notes.push(["inf","pile count governed by gravity axial: (D+L + cap weight) / Qa"]);
+  else if(n_ax!==null && n>n_ax) notes.push(["inf",`gravity axial alone would need only ${n_ax} piles — the extra piles resist the base moment / tension / lateral combos`]);
+  if(eff<1) notes.push(["inf","group efficiency "+eff+" applied to Qa"]);
+  if((hasW||hasE)&&inp.inc33) notes.push(["inf","+33% allowable (Qa/Qt) applied to the W/E combinations (user option; BNBC §3.9.3.2 intends this for shallow bearing)"]);
+  notes.push(["inf",`${asd.length} service + ${str.length} strength combinations evaluated — governing: sizing ${govC}, strength ${r.govStr||"—"}`]);
+
+  const bad=notes.some(x=>x[0]==="bad"), rev=notes.some(x=>x[0]==="rev");
+  const verdict=bad?"bad":(rev?"review":"ok");
+
+  return {
+    n, pts, B, L, h, d, s, edge, D:inp.D, c1:inp.c1, c2:inp.c2, cxo, cyo,
+    wc, wt, Qa, Qt, pileComp_ok, pileUp_ok, compUtil, upUtil, govC, govT, n_ax,
+    Mux:r.Mux, Muy:r.Muy, MuxT:r.MuxT, MuyT:r.MuyT, Asx, Asy, AsxTop, AsyTop, stmGov,
+    nx,sx,dbx,ny,sy,dby, endx,endy,
+    ntx:txb.n,stx:txb.s,dbtx:txb.db, nty:tyb.n,sty:tyb.s,dbty:tyb.db,
+    colPunch:r.det.colPunch, oneWay:r.det.oneWay, pilePunch:r.det.pilePunch, stm:r.stm,
+    wself:wself(B*L), capVol, capArea:rnd(capArea,2), shape:tri?"tri":"rect", triR,
+    bbs, steelWt, pilesVol, pileLen, cost, cur:inp.cur||"",
+    verdict, notes, Ps:Pgrav, PD:LD.D.P, PL:LD.L.P,
+    Pu:govStrC.P, Mxu:govStrC.Mx, Myu:govStrC.My, govStr:r.govStr,
+    nComboA:asd.length, nComboS:str.length, hasW, hasE, inc33:inp.inc33,
+    autobar:inp.autobar, soil:inp.soil||null, pkind:inp.pkind
+  };
+}
+
+/* ------------------------------------- rendering ------------------------------------- */
+function planSVG(res){
+  const W=360, Hh=320, pad=40;
+  const sc=Math.min((W-2*pad)/res.B, (Hh-2*pad)/res.L);
+  const cx=W/2, cy=Hh/2;
+  const cxo=res.cxo||0, cyo=res.cyo||0;                 // cap centred on the pile bounding box
+  const X=mx=> cx+(mx-cxo)*sc, Y=my=> cy-(my-cyo)*sc;   // y up
+  const col=(st)=>`var(${st})`;
+  const bw=res.B*sc, bl=res.L*sc;
+  const c1=res.c1/1000*sc, c2=res.c2/1000*sc, pr=res.D/1000/2*sc;
+  let capShape;
+  if(res.shape==="tri" && res.triR){
+    const R=res.triR, pstr=[90,210,330].map(a=>`${X(R*Math.cos(a*PI/180)).toFixed(1)},${Y(R*Math.sin(a*PI/180)).toFixed(1)}`).join(" ");
+    capShape=`<polygon points="${pstr}" fill="${col('--fill')}" stroke="${col('--stroke')}" stroke-width="2"/>`;
+  } else {
+    capShape=`<rect x="${(cx-bw/2).toFixed(1)}" y="${(cy-bl/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${bl.toFixed(1)}" rx="4" fill="${col('--fill')}" stroke="${col('--stroke')}" stroke-width="2"/>`;
+  }
+  let piles="";
+  res.pts.forEach(([x,y])=>{ piles+=`<circle cx="${X(x).toFixed(1)}" cy="${Y(y).toFixed(1)}" r="${pr.toFixed(1)}" fill="${col('--stroke')}" fill-opacity="0.35" stroke="${col('--stroke')}" stroke-width="1.5"/>`; });
+  return `<svg viewBox="0 0 ${W} ${Hh}" role="img">
+    ${capShape}
+    ${piles}
+    <rect x="${(X(0)-c1/2).toFixed(1)}" y="${(Y(0)-c2/2).toFixed(1)}" width="${c1.toFixed(1)}" height="${c2.toFixed(1)}"
+      fill="${col('--col')}" stroke="${col('--ink')}" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="${cx}" y="${(cy-bl/2-12).toFixed(1)}" text-anchor="middle" font-size="12" fill="${col('--muted')}">B = ${res.B.toFixed(3)} m (${ftin(res.B)})</text>
+    <text x="${(cx-bw/2-10).toFixed(1)}" y="${cy}" text-anchor="middle" font-size="12" fill="${col('--muted')}" transform="rotate(-90 ${(cx-bw/2-10).toFixed(1)} ${cy})">L = ${res.L.toFixed(3)} m (${ftin(res.L)})</text>
+  </svg>`;
+}
+function elevSVG(res){
+  const W=360, Hh=320, pad=30;
+  const capW=res.B*1000, capH=res.h;
+  const sc=Math.min((W-2*pad)/capW, (Hh*0.55)/capH);
+  const cx=W/2, topY=70, exo=(res.cxo||0)*1000;
+  const bw=capW*sc, bh=capH*sc;
+  const c1=res.c1*sc, pr=res.D/2*sc, d=res.d*sc;
+  const col=(st)=>`var(${st})`;
+  const PX=mm=> cx+(mm-exo)*sc;
+  let piles="";
+  const xset=[...new Set(res.pts.map(p=>rnd(p[0],3)))].sort((a,b)=>a-b);
+  xset.forEach(x=>{ const px=PX(x*1000);
+    piles+=`<rect x="${(px-pr).toFixed(1)}" y="${(topY+bh-75*sc).toFixed(1)}" width="${(2*pr).toFixed(1)}" height="${(120*sc+75*sc).toFixed(1)}" fill="${col('--col')}" stroke="${col('--stroke')}" stroke-width="1.2"/>`; });
+  return `<svg viewBox="0 0 ${W} ${Hh}" role="img">
+    ${piles}
+    <rect x="${(cx-bw/2).toFixed(1)}" y="${topY}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${col('--fill')}" stroke="${col('--stroke')}" stroke-width="2"/>
+    <rect x="${(PX(0)-c1/2).toFixed(1)}" y="${(topY-40).toFixed(1)}" width="${c1.toFixed(1)}" height="40" fill="${col('--col')}" stroke="${col('--ink')}" stroke-width="1.5"/>
+    <line x1="${(cx-bw/2+6).toFixed(1)}" y1="${(topY+bh-(res.h-res.d)*sc).toFixed(1)}" x2="${(cx+bw/2-6).toFixed(1)}" y2="${(topY+bh-(res.h-res.d)*sc).toFixed(1)}" stroke="${col('--accent')}" stroke-width="2" stroke-dasharray="6 4"/>
+    <line x1="${(cx-bw/2+6).toFixed(1)}" y1="${(topY+(res.h-res.d)*sc).toFixed(1)}" x2="${(cx+bw/2-6).toFixed(1)}" y2="${(topY+(res.h-res.d)*sc).toFixed(1)}" stroke="${col('--accent')}" stroke-width="1.3" stroke-dasharray="3 4" opacity="0.7"/>
+    <text x="${(cx+bw/2+6).toFixed(1)}" y="${(topY+bh/2).toFixed(1)}" font-size="12" fill="${col('--muted')}">h ${Math.round(res.h)}</text>
+    <text x="${(cx+bw/2+6).toFixed(1)}" y="${(topY+bh-(res.h-res.d)*sc-4).toFixed(1)}" font-size="11" fill="${col('--accent')}">d ${Math.round(res.d)}</text>
+    <text x="${cx}" y="${(topY-48).toFixed(1)}" text-anchor="middle" font-size="12" fill="${col('--muted')}">column ${res.c1}×${res.c2}</text>
+  </svg>`;
+}
+
+function ratioPill(v){
+  if(v===null||v===undefined||!isFinite(v)) return '<span class="pill na">—</span>';
+  const cls=v<=1?"ok":"bad";
+  return `<span class="pill ${cls}">${v.toFixed(2)}${v<=1?" ✓":" ✗"}</span>`;
+}
+
+function render(res){
+  const vmap={ok:["ok","OK","All checks satisfied"],review:["review","REVIEW","Design works — see the review notes"],bad:["bad","NOT ADEQUATE","One or more checks fail"]};
+  const [vc,vl,vs]=vmap[res.verdict];
+  const inch=mm=>(mm/25.4).toFixed(1);
+  const barTxt=(n,s,d)=>`${n}–Ø${d} @ ${Math.round(s)} mm`;
+  const stm=res.stm;
+  let checks=`
+    <tr><td>Pile compression (service · ${res.govC})</td><td class="num">${res.wc.toFixed(0)} kN · Qa ${res.Qa.toFixed(0)}</td><td class="num">${ratioPill(res.compUtil)}</td></tr>
+    <tr><td>Pile uplift (service · ${res.govT})</td><td class="num">min ${res.wt.toFixed(0)} kN · Qt ${res.Qt.toFixed(0)}</td><td class="num">${res.upUtil>1e-6?ratioPill(res.upUtil):'<span class="pill ok">none ✓</span>'}</td></tr>`;
+  if(res.n>1){
+    checks+=`
+    <tr><td>Column two-way (punching) v<sub>u</sub>/φv<sub>c</sub></td><td class="num">incl. γ<sub>v</sub>·M<sub>u</sub></td><td class="num">${ratioPill(res.colPunch)}</td></tr>
+    <tr><td>One-way shear V<sub>u</sub>/φV<sub>c</sub> (at d)</td><td class="num">worst of 4 faces</td><td class="num">${ratioPill(res.oneWay)}</td></tr>
+    <tr><td>Corner/edge pile punching</td><td class="num"></td><td class="num">${ratioPill(res.pilePunch)}</td></tr>`;
+    if(stm) checks+=`
+    <tr><td>STM strut (bottle, βs 0.60)</td><td class="num"></td><td class="num">${ratioPill(stm.strut)}</td></tr>
+    <tr><td>STM pile node (βn ${stm.bn})</td><td class="num"></td><td class="num">${ratioPill(stm.pileNode)}</td></tr>
+    <tr><td>STM strut angle θ<sub>min</sub></td><td class="num">${stm.th_min}° (≥ 25°)</td><td class="num">${stm.th_min>=25?'<span class="pill ok">OK ✓</span>':'<span class="pill bad">✗</span>'}</td></tr>
+    <tr><td>Column node bearing</td><td class="num"></td><td class="num">${ratioPill(stm.colNode)}</td></tr>`;
+  }
+  const notesHtml=res.notes.map(([t,m])=>{
+    const cls={bad:"n-bad",rev:"n-rev",ok:"n-ok",inf:"n-inf"}[t];
+    return `<li class="${cls}">${m}</li>`;
+  }).join("");
+
+  document.getElementById("out").innerHTML=`
+    <div class="verdict ${vc}"><span class="big">${vc==="ok"?"✓":vc==="review"?"!":"✗"}</span>
+      <span>${vl}</span><span style="font-weight:400;color:inherit;opacity:.85">${vs}</span></div>
+
+    <div class="actions">
+      <button class="btn" onclick="openCalcSheet()">📄 Calculation sheet (print / PDF)</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="l">Piles</div><div class="v">${res.n}</div><div class="s">Ø${res.D} mm${res.n_ax!==null&&res.n_ax!==res.n?` · axial min ${res.n_ax}`:""}</div></div>
+      <div class="kpi"><div class="l">Cap size B × L</div><div class="v">${res.B.toFixed(2)}×${res.L.toFixed(2)} m</div><div class="s">${ftin(res.B)} × ${ftin(res.L)}</div></div>
+      <div class="kpi"><div class="l">Thickness h</div><div class="v">${Math.round(res.h)} mm</div><div class="s">${inch(res.h)} in · d ${Math.round(res.d)} mm</div></div>
+      <div class="kpi"><div class="l">Max pile load</div><div class="v">${res.wc.toFixed(0)} kN</div><div class="s">min ${res.wt.toFixed(0)} kN (service)</div></div>
+    </div>
+
+    <div class="figs">
+      <div class="fig"><h4>Plan — cap, piles &amp; column</h4>${planSVG(res)}</div>
+      <div class="fig"><h4>Section (along X)</h4>${elevSVG(res)}</div>
+    </div>
+
+    <div class="secttl">Reinforcement — bottom mat</div>
+    <div class="rebar">
+      <div class="b"><div class="l">Bottom bars along X (over L = ${res.L.toFixed(2)} m)</div>
+        <div class="v">${barTxt(res.nx,res.sx,res.dbx)}</div>
+        <div class="l" style="margin-top:3px">@ ${inch(res.sx)} in · As,req ${Math.round(res.Asx)} mm² · ends: ${res.endx}${res.stmGov.includes("X")?" · STM tie governs":""}</div></div>
+      <div class="b"><div class="l">Bottom bars along Y (over B = ${res.B.toFixed(2)} m)</div>
+        <div class="v">${barTxt(res.ny,res.sy,res.dby)}</div>
+        <div class="l" style="margin-top:3px">@ ${inch(res.sy)} in · As,req ${Math.round(res.Asy)} mm² · ends: ${res.endy}${res.stmGov.includes("Y")?" · STM tie governs":""}</div></div>
+    </div>
+    <div class="secttl">Reinforcement — top mat</div>
+    <div class="rebar">
+      <div class="b"><div class="l">Top bars along X (over L)</div>
+        <div class="v">${barTxt(res.ntx,res.stx,res.dbtx)}</div>
+        <div class="l" style="margin-top:3px">@ ${inch(res.stx)} in · As,req ${Math.round(res.AsxTop)} mm² · ${res.MuxT>1?("hogging "+res.MuxT.toFixed(0)+" kN·m"):"minimum steel"}</div></div>
+      <div class="b"><div class="l">Top bars along Y (over B)</div>
+        <div class="v">${barTxt(res.nty,res.sty,res.dbty)}</div>
+        <div class="l" style="margin-top:3px">@ ${inch(res.sty)} in · As,req ${Math.round(res.AsyTop)} mm² · ${res.MuyT>1?("hogging "+res.MuyT.toFixed(0)+" kN·m"):"minimum steel"}</div></div>
+    </div>
+    <div class="hint" style="margin-top:4px">Bar Ø ${res.autobar?"auto-selected (raised where the spacing was tight)":"= Ø"+res.dbx+" as selected"}.
+      Top mat is a nominal mesh unless piles go into tension (hogging).</div>
+
+    <div class="secttl">Design checks</div>
+    <table class="res"><thead><tr><th>Check</th><th class="num">Value</th><th class="num">Ratio</th></tr></thead>
+      <tbody>${checks}</tbody></table>
+
+    <div class="secttl">Flexure &amp; quantities</div>
+    <table class="res"><tbody>
+      <tr><td>Service gravity D + L</td><td class="num">${res.Ps.toFixed(0)} kN (D ${res.PD}, L ${res.PL})</td></tr>
+      <tr><td>Load combinations</td><td class="num">${res.nComboA} service · ${res.nComboS} strength${(res.hasW||res.hasE)?(res.inc33?" · +33% on W/E":" · W/E, no 33%"):""}</td></tr>
+      <tr><td>Governing combo (size / strength)</td><td class="num">${res.govC} / ${res.govStr||"—"}</td></tr>
+      <tr><td>Factored P<sub>u</sub> (governing)</td><td class="num">${res.Pu.toFixed(0)} kN${res.Myu||res.Mxu?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
+      <tr><td>Design moment M<sub>u</sub> (X face / Y face)</td><td class="num">${res.Mux.toFixed(0)} / ${res.Muy.toFixed(0)} kN·m</td></tr>
+      <tr><td>Pile spacing (c/c)</td><td class="num">${res.s.toFixed(2)} m (${(res.s/ (res.D/1000)).toFixed(1)}Ø)</td></tr>
+      <tr><td>Cap + backfill weight</td><td class="num">${res.wself.toFixed(0)} kN</td></tr>
+    </tbody></table>
+
+    <div class="secttl">Quantities &amp; bar schedule</div>
+    <table class="res"><thead><tr><th>Bar</th><th class="num">n</th><th class="num">Ø</th><th class="num">Length (mm)</th><th class="num">Total (m)</th><th class="num">Weight (kg)</th></tr></thead>
+      <tbody>${res.bbs.map(b=>`<tr><td>${b.label}</td><td class="num">${b.n}</td><td class="num">${b.db}</td><td class="num">${b.len}</td><td class="num">${b.tot}</td><td class="num">${b.wt}</td></tr>`).join("")}
+        <tr><td><b>Steel total</b></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"><b>${res.steelWt} kg</b></td></tr></tbody></table>
+    <table class="res"><tbody>
+      <tr><td>Cap concrete (${res.shape==="tri"?"triangle, "+res.capArea+" m²":"B×L"} × h)</td><td class="num">${res.capVol} m³</td></tr>
+      <tr><td>Piles concrete (${res.n}×π/4·Ø²·L, L = ${res.pileLen} m)</td><td class="num">${res.pilesVol} m³</td></tr>
+      <tr><td>Cap steel ratio</td><td class="num">${(res.steelWt/Math.max(res.capVol,0.01)).toFixed(0)} kg/m³</td></tr>
+      ${res.cost!==null?`<tr><td>Estimated cost</td><td class="num">${res.cur} ${res.cost.toLocaleString()}</td></tr>`:""}
+    </tbody></table>
+    <div class="actions">
+      <button class="btn sec" onclick="downloadDXF()">⬇ Cap drawing (DXF)</button>
+      <button class="btn sec" onclick="downloadBBS()">⬇ Bar schedule (CSV)</button>
+    </div>
+
+    <div class="secttl">Notes</div>
+    <ul class="notes">${notesHtml}</ul>
+
+    <div class="sub">Basis: sizing on unfactored service load (BNBC §2.7); thickness &amp; steel on factored load
+      (ACI 318-14 / BNBC Part 6 Ch.6) — two-way shear §22.6, one-way shear §22.5, flexure §22.2,
+      min. steel §24.4.3.2; pile-cap strut-and-tie §13.4 + Appendix I; min. depth §13.4.2.1; cover 75 mm cast
+      against earth §20.6.1.3.1. Rigid-cap pile loads P/n ± M·x/Σx². Preliminary tool — confirm with a detailed
+      model.</div>`;
+}
+
+/* ------------------------- soil: single-pile capacity from SPT N60 (BNBC §3.10) ------------------------- */
+const COEF={
+  driven:{clay:[1.8,70,45,null,4000], sand:[2.0,60,40,400,11000], silt:[1.7,60,30,300,11000]},
+  bored :{clay:[1.2,70,25,null,4000], sand:[1.0,60,15,150,4000],  silt:[0.9,60,10,100,4000]},
+};
+const GAMMA_C_PILE=24.0;
+function layerAt(layers,z){ for(const r of layers){ if(r.top<=z && z<r.bot) return r; } return layers[layers.length-1]; }
+function granularTop(layers,tip,top){
+  const lay=layers.filter(r=>r.top<tip).sort((a,b)=>b.top-a.top);
+  let z=tip;
+  for(const r of lay){ if(r.soil==="clay") break; z=r.top; }
+  return Math.max(z,top);
+}
+function pileCapacity(layers,D,L,cutoff,kind,FS,fs_skin,fs_end,lbmode,gw){
+  layers=layers.slice().sort((a,b)=>a.top-b.top);
+  const top=cutoff, tip=cutoff+L, per=PI*D, area=PI*D*D/4;
+  let Qs=0; const rows=[];
+  for(const r of layers){
+    const a=Math.max(r.top,top), b=Math.min(r.bot,tip);
+    if(b<=a) continue;
+    const [k,cap]=COEF[kind][r.soil];
+    const fs=Math.min(k*r.N, cap), q=fs*per*(b-a); Qs+=q;
+    rows.push({from:rnd(a,2),to:rnd(b,2),soil:r.soil,N:r.N,fs:rnd(fs,1),Qs:rnd(q,1)});
+  }
+  const tl=layerAt(layers, tip-1e-6), soil_t=tl.soil;
+  const zz=[]; for(let i=0;i<11;i++) zz.push(tip+i*3*D/10);
+  const Nt=zz.reduce((a,z)=>a+layerAt(layers,z).N,0)/zz.length;
+  const [,,kb,capN,capf]=COEF[kind][soil_t];
+  let Lb=null, fb;
+  if(soil_t==="clay"){ fb=Math.min(kb*Nt, capf); }
+  else { const gtop=(lbmode==="layer")?Math.max(tl.top,top):granularTop(layers,tip,top); Lb=tip-gtop; fb=Math.min(kb*Nt*(Lb/D), capN*Nt, capf); }
+  const Qb=fb*area, W=GAMMA_C_PILE*area*L, Qult=Qs+Qb-W;
+  const Qa_overall=Qult/FS, Qa_partial=Qs/fs_skin+Qb/fs_end-W, Qa=Math.min(Qa_overall,Qa_partial);
+  let W_up;
+  if(gw===null||gw===undefined||isNaN(gw)) W_up=W;
+  else { const below=Math.max(0,tip-Math.max(gw,top)); W_up=area*(GAMMA_C_PILE*(L-below)+(GAMMA_C_PILE-9.81)*below); }
+  const Qup=(0.7*Qs+W_up)/FS;
+  return {D,L,tip:rnd(tip,2),soil_t,Nt:rnd(Nt,1),Lb:Lb!==null?rnd(Lb,2):null,fb:Math.round(fb),
+    Qs:rnd(Qs,1),Qb:rnd(Qb,1),W:rnd(W,1),Qult:rnd(Qult,1),Qa_overall:rnd(Qa_overall,1),
+    Qa_partial:rnd(Qa_partial,1),Qa:rnd(Qa,1),Qup:rnd(Qup,1),kind,rows};
+}
+
+/* ------------------------------------- wiring ------------------------------------- */
+const $=id=>document.getElementById(id);
+(function initN(){ const sel=$("n"); LAYOUTS.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+(v===1?" pile":" piles");sel.appendChild(o);}); sel.value=4; })();
+
+/* ---- Qa/Qt source: manual or SPT soil report ---- */
+let capMode="manual";
+document.querySelectorAll("#capmode button").forEach(b=>b.addEventListener("click",()=>{
+  capMode=b.dataset.c;
+  document.querySelectorAll("#capmode button").forEach(x=>x.classList.toggle("on",x===b));
+  $("capManual").style.display=capMode==="manual"?"grid":"none";
+  $("capSoil").style.display=capMode==="soil"?"block":"none";
+  run();
+}));
+
+/* ---- borehole table ---- */
+const DEFAULT_LAYERS=[{top:0,bot:3,soil:"clay",N:4},{top:3,bot:9,soil:"silt",N:8},{top:9,bot:17,soil:"sand",N:16},{top:17,bot:30,soil:"sand",N:30}];
+let bh=DEFAULT_LAYERS.map(x=>({...x})), lastSoil=null;
+function renderBH(){
+  const body=$("bhbody"); body.innerHTML="";
+  bh.forEach((r,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><input type="number" step="0.5" value="${r.top}" data-i="${i}" data-k="top"></td>
+      <td><input type="number" step="0.5" value="${r.bot}" data-i="${i}" data-k="bot"></td>
+      <td><select data-i="${i}" data-k="soil">${["clay","sand","silt"].map(s=>`<option ${s===r.soil?"selected":""}>${s}</option>`).join("")}</select></td>
+      <td><input type="number" step="1" value="${r.N}" data-i="${i}" data-k="N"></td>
+      <td class="x"><button type="button" class="del" data-del="${i}" title="remove">×</button></td>`;
+    body.appendChild(tr);
+  });
+}
+function bhChange(e){ const t=e.target; if(t.dataset && t.dataset.k!==undefined){ const i=+t.dataset.i,k=t.dataset.k; bh[i][k]=(k==="soil")?t.value:(+t.value); } }
+
+function computeSoil(){
+  const out=$("soilout"); if(!out) return;
+  try{
+    const D=(+$("D").value)/1000;
+    const layers=bh.filter(r=>isFinite(r.top)&&isFinite(r.bot)&&r.bot>r.top&&isFinite(r.N));
+    if(!layers.length){ out.innerHTML='<span class="c">Add borehole layers…</span>'; lastSoil=null; return; }
+    const cutoff=+$("cutoff").value, L=+$("Lp").value, kind=$("pkind").value, FS=+$("FSp").value, gw=+$("gw").value, lbmode=$("lbmode").value;
+    const r=pileCapacity(layers,D,L,cutoff,kind,FS,1.5,3.0,lbmode,gw);
+    lastSoil=r;
+    $("Qa").value=Math.max(10,Math.round(r.Qa));
+    $("Qt").value=Math.max(0,Math.round(Math.max(r.Qup,0)));
+    const maxBot=Math.max(...layers.map(x=>x.bot));
+    const warn=(cutoff+L+3*D>maxBot+1e-6)?'<span class="c" style="color:var(--bad)">borehole shallow: tip + 3Ø below deepest layer</span>':'';
+    out.innerHTML=`<span class="c">Qa <b>${r.Qa.toFixed(0)}</b> kN</span>
+      <span class="c">Qt(uplift) <b>${Math.max(r.Qup,0).toFixed(0)}</b> kN</span>
+      <span class="c">Qs ${r.Qs.toFixed(0)} · Qb ${r.Qb.toFixed(0)} · W ${r.W.toFixed(0)}</span>
+      <span class="c">Qult ${r.Qult.toFixed(0)}</span>
+      <span class="c">tip ${r.tip} m · ${r.soil_t} N ${r.Nt}</span>
+      <span class="c">overall/partial ${r.Qa_overall.toFixed(0)} / ${r.Qa_partial.toFixed(0)}</span>${warn}`;
+  }catch(e){ out.innerHTML='<span class="c" style="color:var(--bad)">'+e.message+'</span>'; lastSoil=null; }
+}
+
+function read(){
+  const g=id=>+$(id).value||0;
+  const loads={ D:{P:g("D_P"),Mx:g("D_Mx"),My:g("D_My")},
+                L:{P:g("L_P"),Mx:g("L_Mx"),My:g("L_My")},
+                W:{P:g("W_P"),Mx:g("W_Mx"),My:g("W_My")},
+                E:{P:g("E_P"),Mx:g("E_Mx"),My:g("E_My")} };
+  return {
+    n:+$("n").value, D:+$("D").value, loads, inc33:$("inc33").checked, tri:$("tri").checked,
+    Qa:+$("Qa").value, Qt:+$("Qt").value,
+    c1:+$("c1").value, c2:+$("c2").value, fc:+$("fc").value, fy:+$("fy").value, db:+$("db").value,
+    sf:+$("sf").value, edge:+$("edge").value, hmin:+$("hmin").value, eff:+$("eff").value,
+    Df:+$("Df").value, gavg:+$("gavg").value, tiem:$("tiem").checked, autobar:$("autobar").checked,
+    pileLen:+$("pileLen").value, cur:$("cur").value, rateSteel:+$("rateSteel").value, rateConc:+$("rateConc").value,
+    soil: capMode==="soil"?lastSoil:null, pkind:$("pkind").value
+  };
+}
+let LAST=null;
+function run(){
+  try{
+    if(capMode==="soil") computeSoil();
+    const inp=read(), res=design(inp); LAST={inp,res}; render(res);
+  }catch(e){ $("out").innerHTML='<div class="verdict bad"><span class="big">✗</span><span>Input error</span></div><div class="sub">'+e.message+'</div>'; console.error(e); }
+}
+
+$("form").addEventListener("input",e=>{ if(e.target.closest("#bhbody")) bhChange(e); run(); });
+$("form").addEventListener("change",e=>{ if(e.target.closest("#bhbody")) bhChange(e); run(); });
+$("bhbody").addEventListener("click",e=>{ const d=e.target.dataset.del; if(d!==undefined){ bh.splice(+d,1); renderBH(); run(); } });
+$("addrow").addEventListener("click",()=>{ const last=bh[bh.length-1]||{bot:0}; bh.push({top:+last.bot||0,bot:(+last.bot||0)+5,soil:"sand",N:20}); renderBH(); run(); });
+
+/* ------------------------------- print / PDF calculation sheet ------------------------------- */
+function rr(v){ return (v==null||!isFinite(v))?"—":(v.toFixed(2)+(v<=1?" OK":" FAIL")); }
+function calcSheet(inp,res){
+  const inch=mm=>(mm/25.4).toFixed(1);
+  const d=new Date().toISOString().slice(0,10);
+  const stm=res.stm;
+  const soilRows = res.soil ? res.soil.rows.map(r=>`<tr><td>${r.from}–${r.to}</td><td>${r.soil}</td><td class="n">${r.N}</td><td class="n">${r.fs}</td><td class="n">${r.Qs}</td></tr>`).join("") : "";
+  const soilSec = res.soil ? `
+    <h3>2 · Pile capacity — SPT method (BNBC §3.10)</h3>
+    <table><tr><th>Layer (m)</th><th>Soil</th><th>N60</th><th>f<sub>s</sub> (kPa)</th><th>Q<sub>s</sub> (kN)</th></tr>${soilRows}</table>
+    <table class="kv">
+      <tr><td>Pile</td><td>${res.soil.kind}, Ø${res.D} mm, L ${res.soil.L} m, tip ${res.soil.tip} m (${res.soil.soil_t}, N ${res.soil.Nt})</td></tr>
+      <tr><td>Q<sub>s</sub> / Q<sub>b</sub> / W</td><td>${res.soil.Qs} / ${res.soil.Qb} / ${res.soil.W} kN &nbsp; (f<sub>b</sub> ${res.soil.fb} kPa${res.soil.Lb!=null?`, L<sub>b</sub> ${res.soil.Lb} m`:""})</td></tr>
+      <tr><td>Q<sub>ult</sub> = Q<sub>s</sub>+Q<sub>b</sub>−W</td><td>${res.soil.Qult} kN</td></tr>
+      <tr><td>Q<sub>a</sub> (FS / partial)</td><td>${res.soil.Qa_overall} / ${res.soil.Qa_partial} → <b>Q<sub>a</sub> ${res.soil.Qa} kN</b>, Q<sub>t</sub> uplift <b>${Math.max(res.soil.Qup,0).toFixed(0)} kN</b></td></tr>
+    </table>` : "";
+  let checks=`
+    <tr><td>Pile compression (service · ${res.govC})</td><td class="n">${res.wc.toFixed(0)} kN · Q<sub>a</sub> ${res.Qa.toFixed(0)}</td><td class="n">${rr(res.compUtil)}</td></tr>
+    <tr><td>Pile uplift (service · ${res.govT})</td><td class="n">min ${res.wt.toFixed(0)} kN · Q<sub>t</sub> ${res.Qt.toFixed(0)}</td><td class="n">${res.upUtil>1e-6?rr(res.upUtil):"none"}</td></tr>`;
+  if(res.n>1){
+    checks+=`
+    <tr><td>Column two-way (punching), incl. γ<sub>v</sub>M<sub>u</sub></td><td class="n"></td><td class="n">${rr(res.colPunch)}</td></tr>
+    <tr><td>One-way shear at d (worst of 4 faces)</td><td class="n"></td><td class="n">${rr(res.oneWay)}</td></tr>
+    <tr><td>Corner/edge pile punching</td><td class="n"></td><td class="n">${rr(res.pilePunch)}</td></tr>`;
+    if(stm) checks+=`
+    <tr><td>STM strut (bottle βs 0.60)</td><td class="n"></td><td class="n">${rr(stm.strut)}</td></tr>
+    <tr><td>STM pile node (βn ${stm.bn})</td><td class="n"></td><td class="n">${rr(stm.pileNode)}</td></tr>
+    <tr><td>STM strut angle θ<sub>min</sub></td><td class="n">${stm.th_min}°</td><td class="n">${stm.th_min>=25?"OK":"FAIL"} (≥25°)</td></tr>
+    <tr><td>Column node bearing</td><td class="n"></td><td class="n">${rr(stm.colNode)}</td></tr>`;
+  }
+  const notes=res.notes.map(n=>`<li>${n[1]}</li>`).join("");
+  const vtxt={ok:"OK — all checks satisfied",review:"REVIEW — works, see notes",bad:"NOT ADEQUATE — a check fails"}[res.verdict];
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pile Cap Calculation Sheet</title>
+  <style>
+    :root{--fill:#eef2f6;--stroke:#8aa0b2;--col:#c2cdd6;--ink:#1b2733;--muted:#5a6b7b;--accent:#c8781a;}
+    *{box-sizing:border-box} body{font:12px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1b2733;margin:0;padding:26px 30px;}
+    h1{font-size:19px;margin:0} h3{font-size:13px;border-bottom:2px solid #1b2733;padding-bottom:3px;margin:16px 0 7px}
+    .sub{color:#5a6b7b;font-size:11px;margin:2px 0 10px}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0b5aa2;padding-bottom:8px}
+    .meta{font-size:11px;color:#333;text-align:right}
+    .proj{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin:10px 0;font-size:11.5px}
+    .proj span{border-bottom:1px dotted #99a;padding:2px 0}
+    table{width:100%;border-collapse:collapse;margin:4px 0 2px;font-size:11.5px}
+    th,td{border:1px solid #c3ccd4;padding:4px 6px;text-align:left}
+    th{background:#eef2f6;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px}
+    td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+    table.kv td:first-child{width:38%;color:#5a6b7b}
+    .verdict{font-weight:700;padding:7px 12px;border:1.5px solid;border-radius:7px;margin:10px 0;display:inline-block}
+    .vok{color:#1a7f45;border-color:#1a7f45} .vreview{color:#9a6a00;border-color:#9a6a00} .vbad{color:#b4231f;border-color:#b4231f}
+    .figs{display:flex;gap:14px;margin:8px 0} .figs>div{flex:1;border:1px solid #c3ccd4;border-radius:6px;padding:4px}
+    svg{width:100%;height:auto} ul{margin:4px 0;padding-left:18px} li{margin:2px 0}
+    .foot{margin-top:14px;font-size:10px;color:#5a6b7b;border-top:1px solid #c3ccd4;padding-top:6px}
+    @media print{body{padding:10mm} .noprint{display:none} @page{margin:12mm}}
+    .reb{display:flex;gap:12px;flex-wrap:wrap} .reb div{border:1px solid #c3ccd4;border-radius:6px;padding:6px 10px;font-size:11.5px}
+    .reb b{font-size:13px}
+  </style></head><body>
+  <div class="hdr">
+    <div><h1>Pile Cap — Calculation Sheet</h1><div class="sub">Preliminary design · BNBC-2020 (Part 6) / ACI 318-14 · strut-and-tie per BNBC Appendix I</div></div>
+    <div class="meta">Date: ${d}<br>Pile Cap Designer</div>
+  </div>
+  <div class="proj">
+    <div>Project: <span>&nbsp;</span></div><div>Column / mark: <span>&nbsp;</span></div>
+    <div>Designed by: <span>&nbsp;</span></div><div>Checked by: <span>&nbsp;</span></div>
+  </div>
+  <div class="verdict v${res.verdict}">${vtxt}</div>
+
+  <h3>1 · Design data</h3>
+  <table class="kv">
+    <tr><td>Pile group</td><td>${res.n} piles, Ø${res.D} mm, spacing ${res.s.toFixed(2)} m (${(res.s/(res.D/1000)).toFixed(1)}Ø), edge ${(res.edge*1000).toFixed(0)} mm</td></tr>
+    <tr><td>Column</td><td>${res.c1} × ${res.c2} mm</td></tr>
+    <tr><td>Materials</td><td>f′c ${inp.fc} MPa · fy ${inp.fy} MPa · main bar Ø${inp.db} mm${inp.autobar?" (auto-upsize on)":""}</td></tr>
+    <tr><td>Load cases (P kN · Mx · My)</td><td>D ${inp.loads.D.P} (${inp.loads.D.Mx}, ${inp.loads.D.My}) · L ${inp.loads.L.P} (${inp.loads.L.Mx}, ${inp.loads.L.My}) · W ${inp.loads.W.P} (${inp.loads.W.Mx}, ${inp.loads.W.My}) · E ${inp.loads.E.P} (${inp.loads.E.Mx}, ${inp.loads.E.My})</td></tr>
+    <tr><td>Combinations</td><td>${res.nComboA} service, ${res.nComboS} strength${(res.hasW||res.hasE)?(res.inc33?" · +33% on W/E":" · W/E (no 33%)"):""}; governing size <b>${res.govC}</b>, strength <b>${res.govStr||"—"}</b></td></tr>
+    <tr><td>Service gravity D + L</td><td>${res.Ps.toFixed(0)} kN</td></tr>
+    <tr><td>Governing factored P<sub>u</sub></td><td>${res.Pu.toFixed(0)} kN${(res.Mxu||res.Myu)?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
+    <tr><td>Allowable Q<sub>a</sub> / Q<sub>t</sub></td><td>${res.Qa.toFixed(0)} / ${res.Qt.toFixed(0)} kN${res.soil?" (from SPT soil report)":" (manual)"}</td></tr>
+  </table>
+  ${soilSec}
+
+  <h3>${res.soil?3:2} · Cap geometry &amp; pile reactions</h3>
+  <div class="figs"><div>${planSVG(res)}</div><div>${elevSVG(res)}</div></div>
+  <table class="kv">
+    <tr><td>Cap size B × L</td><td>${res.B.toFixed(3)} × ${res.L.toFixed(3)} m (${ftin(res.B)} × ${ftin(res.L)})</td></tr>
+    <tr><td>Thickness h / eff. depth d</td><td>${Math.round(res.h)} mm (${inch(res.h)} in) / d ${Math.round(res.d)} mm; cover 150 mm (75 embed + 75)</td></tr>
+    <tr><td>Pile load (service)</td><td>max ${res.wc.toFixed(0)} kN, min ${res.wt.toFixed(0)} kN &nbsp;(rigid cap: P/n ± M·x/Σx²)</td></tr>
+    <tr><td>Cap + backfill weight</td><td>${res.wself.toFixed(0)} kN · concrete ${res.capVol} m³</td></tr>
+  </table>
+
+  <h3>${res.soil?4:3} · Design checks (factored)</h3>
+  <table><tr><th>Check</th><th class="n">Value</th><th class="n">Ratio / status</th></tr>${checks}</table>
+
+  <h3>${res.soil?5:4} · Flexure &amp; reinforcement</h3>
+  <table class="kv">
+    <tr><td>Design moment M<sub>u</sub> (X / Y face)</td><td>${res.Mux.toFixed(0)} / ${res.Muy.toFixed(0)} kN·m (sagging)${(res.MuxT>1||res.MuyT>1)?` · hogging ${res.MuxT.toFixed(0)} / ${res.MuyT.toFixed(0)}`:""}</td></tr>
+  </table>
+  <div class="reb">
+    <div>Bottom X<br><b>${res.nx}–Ø${res.dbx} @ ${Math.round(res.sx)} mm</b><br>As,req ${Math.round(res.Asx)} mm² · ends ${res.endx}</div>
+    <div>Bottom Y<br><b>${res.ny}–Ø${res.dby} @ ${Math.round(res.sy)} mm</b><br>As,req ${Math.round(res.Asy)} mm² · ends ${res.endy}</div>
+    <div>Top X<br><b>${res.ntx}–Ø${res.dbtx} @ ${Math.round(res.stx)} mm</b><br>As,req ${Math.round(res.AsxTop)} mm²</div>
+    <div>Top Y<br><b>${res.nty}–Ø${res.dbty} @ ${Math.round(res.sty)} mm</b><br>As,req ${Math.round(res.AsyTop)} mm²</div>
+  </div>
+  <table class="kv" style="margin-top:6px">
+    <tr><td>Steel (BBS total)</td><td>${res.steelWt} kg${res.cost!=null?` &nbsp;·&nbsp; est. cost ${res.cur} ${res.cost.toLocaleString()}`:""}</td></tr>
+    <tr><td>Concrete</td><td>cap ${res.capVol} m³ (${res.shape==="tri"?"triangular":"rectangular"}) &nbsp;·&nbsp; piles ${res.pilesVol} m³ (L ${res.pileLen} m)</td></tr>
+  </table>
+  ${stm?`<h3>${res.soil?6:5} · Strut-and-tie (BNBC Appendix I)</h3>
+  <table class="kv">
+    <tr><td>θ<sub>min</sub> / lever z</td><td>${stm.th_min}° (≥25°) · z ${stm.z} mm</td></tr>
+    <tr><td>Ties X / Y</td><td>${stm.Tx} / ${stm.Ty} kN → As ${stm.AsTx} / ${stm.AsTy} mm²</td></tr>
+    <tr><td>Strut / pile-node / col-node ratio</td><td>${stm.strut} / ${stm.pileNode} / ${stm.colNode}</td></tr>
+  </table>`:""}
+
+  <h3>Notes</h3><ul>${notes}</ul>
+  <div class="foot">Preliminary design — rigid-cap assumption, single gravity combination (1.2D+1.6L). Verify
+   W/E combinations, pile structural capacity, group action, settlement and grade beams with a detailed model
+   (e.g. SAFE) before issuing drawings. Generated by the Pile Cap Designer.</div>
+  <script>setTimeout(function(){try{window.print();}catch(e){}},350);<\/script>
+  </body></html>`;
+}
+function openCalcSheet(){
+  if(!LAST){ return; }
+  const w=window.open("","_blank");
+  if(!w){ alert("Allow pop-ups to open the calculation sheet, then try again."); return; }
+  w.document.open(); w.document.write(calcSheet(LAST.inp,LAST.res)); w.document.close(); w.focus();
+}
+
+/* ------------------------------- DXF (plan + section) & BBS (CSV) export ------------------------------- */
+function _dxf(res){
+  const e=[];
+  const LN=(l,x1,y1,x2,y2)=>e.push(`0\nLINE\n8\n${l}\n10\n${x1.toFixed(1)}\n20\n${y1.toFixed(1)}\n11\n${x2.toFixed(1)}\n21\n${y2.toFixed(1)}`);
+  const CR=(l,cx,cy,r)=>e.push(`0\nCIRCLE\n8\n${l}\n10\n${cx.toFixed(1)}\n20\n${cy.toFixed(1)}\n40\n${r.toFixed(1)}`);
+  const TX=(l,x,y,h,s)=>e.push(`0\nTEXT\n8\n${l}\n10\n${x.toFixed(1)}\n20\n${y.toFixed(1)}\n40\n${h}\n1\n${s}`);
+  const B=res.B*1000, Lm=res.L*1000, cxo=(res.cxo||0)*1000, cyo=(res.cyo||0)*1000;
+  if(res.shape==="tri" && res.triR){
+    const R=res.triR*1000, v=[90,210,330].map(a=>[R*Math.cos(a*PI/180), R*Math.sin(a*PI/180)]);
+    for(let i=0;i<3;i++){ LN("CAP",v[i][0],v[i][1],v[(i+1)%3][0],v[(i+1)%3][1]); }
+  } else {
+    LN("CAP",-B/2,-Lm/2,B/2,-Lm/2); LN("CAP",B/2,-Lm/2,B/2,Lm/2); LN("CAP",B/2,Lm/2,-B/2,Lm/2); LN("CAP",-B/2,Lm/2,-B/2,-Lm/2);
+  }
+  res.pts.forEach(([x,y])=>CR("PILE",x*1000-cxo,y*1000-cyo,res.D/2));
+  const c1=res.c1,c2=res.c2, ox=-cxo, oy=-cyo;
+  LN("COL",ox-c1/2,oy-c2/2,ox+c1/2,oy-c2/2);LN("COL",ox+c1/2,oy-c2/2,ox+c1/2,oy+c2/2);
+  LN("COL",ox+c1/2,oy+c2/2,ox-c1/2,oy+c2/2);LN("COL",ox-c1/2,oy+c2/2,ox-c1/2,oy-c2/2);
+  let tx=B/2+500, ty=Lm/2;
+  const line=(s,h)=>{ TX("TEXT",tx,ty,h||60,s); ty-=(h||60)*2.2; };
+  line(`PILE CAP - ${res.n} PILES`,90);
+  line(`CAP ${res.B.toFixed(2)}x${res.L.toFixed(2)}m  h=${Math.round(res.h)}mm  d=${Math.round(res.d)}mm`);
+  line(`PILE DIA ${res.D}mm  SPACING ${res.s.toFixed(2)}m`);
+  line(`BOT X ${res.nx}-D${res.dbx}@${Math.round(res.sx)}   BOT Y ${res.ny}-D${res.dby}@${Math.round(res.sy)}`);
+  line(`TOP X ${res.ntx}-D${res.dbtx}@${Math.round(res.stx)}   TOP Y ${res.nty}-D${res.dbty}@${Math.round(res.sty)}`);
+  line(`CONCRETE ${res.capVol} m3   STEEL ${res.steelWt} kg`);
+  const sy0=-Lm/2-900, h=res.h;
+  LN("SEC",-B/2,sy0,B/2,sy0); LN("SEC",B/2,sy0,B/2,sy0-h); LN("SEC",B/2,sy0-h,-B/2,sy0-h); LN("SEC",-B/2,sy0-h,-B/2,sy0);
+  LN("REBAR",-B/2+75,sy0-h+75,B/2-75,sy0-h+75);
+  LN("REBAR",-B/2+75,sy0-75,B/2-75,sy0-75);
+  res.pts.forEach(([x,y],i)=>{ const px=x*1000-cxo; LN("PILE",px-res.D/2,sy0-h,px-res.D/2,sy0-h-1000); LN("PILE",px+res.D/2,sy0-h,px+res.D/2,sy0-h-1000); });
+  TX("TEXT",-B/2,sy0-h-1200,60,`SECTION A-A   h=${Math.round(h)}mm`);
+  return `0\nSECTION\n2\nENTITIES\n${e.join("\n")}\n0\nENDSEC\n0\nEOF\n`;
+}
+function _download(name,text,mime){
+  const blob=new Blob([text],{type:mime||"text/plain"}), url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+}
+function downloadDXF(){ if(!LAST) return; _download("pile_cap_"+LAST.res.n+"pile.dxf", _dxf(LAST.res), "application/dxf"); }
+function downloadBBS(){ if(!LAST) return; const r=LAST.res;
+  let csv="Bar,n,Dia(mm),Length(mm),Total(m),Weight(kg)\n";
+  r.bbs.forEach(b=>csv+=`${b.label},${b.n},${b.db},${b.len},${b.tot},${b.wt}\n`);
+  csv+=`Steel total,,,,,${r.steelWt}\n,,,,,\n`;
+  csv+=`Cap concrete (m3),,,,,${r.capVol}\nPiles concrete (m3),,,,,${r.pilesVol}\n`;
+  _download("pile_cap_"+r.n+"pile_BBS.csv", csv, "text/csv");
+}
+
+// theme toggle
+const root=document.documentElement;
+$("theme").addEventListener("click",()=>{
+  const cur=root.getAttribute("data-theme");
+  const next = cur==="dark"?"light":(cur==="light"?"dark":(matchMedia("(prefers-color-scheme: dark)").matches?"light":"dark"));
+  root.setAttribute("data-theme",next);
+  try{ localStorage.setItem("pcd-theme",next); }catch(_){}
+});
+try{ const t=localStorage.getItem("pcd-theme"); if(t) root.setAttribute("data-theme",t); }catch(_){}
+
+renderBH();
+run();
+</script>
+</body>
+</html>
