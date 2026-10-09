@@ -156,6 +156,8 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
               <input type="number" id="D" value="500" min="200" max="1500" step="10"/>
             </div>
           </div>
+          <label class="chk" style="margin-top:6px"><input type="checkbox" id="tri" checked/> Triangular cap for a
+            3-pile group (saves concrete)</label>
           <label class="f" style="margin-top:8px">Load cases (unfactored, per column at the cap top)</label>
           <table class="bh" id="loadtbl">
             <thead><tr><th>Case</th><th>P (kN)</th><th>Mx (kN·m)</th><th>My (kN·m)</th></tr></thead>
@@ -283,6 +285,14 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
               check only (BNBC §2.7). Set Df = 0 to ignore.</div>
             <label class="chk"><input type="checkbox" id="tiem"/> Tie / grade beams take column base moments
               (piles carry axial only)</label>
+            <div class="row" style="margin-top:8px">
+              <div><label class="f">Pile length, for quantities (m)</label><input type="number" id="pileLen" value="20" min="3" max="80" step="1"/></div>
+              <div><label class="f">Currency label</label><input type="text" id="cur" value="৳" maxlength="4"/></div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <div><label class="f">Steel rate (per kg · 0 = skip)</label><input type="number" id="rateSteel" value="0" min="0" step="1"/></div>
+              <div><label class="f">Concrete rate (per m³ · 0 = skip)</label><input type="number" id="rateConc" value="0" min="0" step="100"/></div>
+            </div>
           </fieldset>
         </details>
         <div class="hint" style="margin-top:4px">Effective cover in the cap is fixed at 150 mm (75 mm pile
@@ -513,14 +523,16 @@ function design(inp){
   }
 
   const n=inp.n;
+  const tri=(n===3 && inp.tri);                        // triangular cap option for a 3-pile group
   const pts=pile_layout(n,s);
   const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   const Sx2=pts.reduce((a,p)=>a+p[0]*p[0],0), Sy2=pts.reduce((a,p)=>a+p[1]*p[1],0);
   const Sx2e=Sx2||1e-9, Sy2e=Sy2||1e-9;
   const B=ceil_to(Math.max(...xs)-Math.min(...xs)+2*edge,3*IN/1000);
   const L=ceil_to(Math.max(...ys)-Math.min(...ys)+2*edge,3*IN/1000);
-  // cap is centred on the pile bounding box (so every pile keeps its edge distance — fixes 3-pile etc.)
-  const cxo=(Math.max(...xs)+Math.min(...xs))/2, cyo=(Math.max(...ys)+Math.min(...ys))/2;
+  // rectangular cap is centred on the pile bounding box (every pile keeps its edge distance — fixes 3-pile);
+  // the triangular cap is centred on the centroid (equilateral)
+  const cxo=tri?0:(Math.max(...xs)+Math.min(...xs))/2, cyo=tri?0:(Math.max(...ys)+Math.min(...ys))/2;
 
   // instability: a single line of piles cannot resist a moment across the line
   const anyMx=[...asd,...str].some(c=>Math.abs(c.Mx)>1e-6), anyMy=[...asd,...str].some(c=>Math.abs(c.My)>1e-6);
@@ -640,6 +652,26 @@ function design(inp){
 
   const govStrC = str.find(c=>c.name===r.govStr) || str[1] || str[0];
 
+  // ---- cap shape & quantities ----
+  const triR = tri ? (s/Math.sqrt(3) + 2*edge) : null;        // cap circumradius (equilateral)
+  const capArea = tri ? (3*Math.sqrt(3)/4*triR*triR) : (B*L);
+  const capVol = rnd(capArea*h/1000, 2);
+  const pileLen = inp.pileLen||20, pilesVol = rnd(n*PI*D*D/4*pileLen, 2);
+  // bar bending schedule (approximate lengths, straight + 90° hooks where developed by hooks)
+  const barWtM = dd=>0.0061654*dd*dd;                         // kg per m (ρ 7850)
+  const bbsRow=(label,nb,dim,dd,hooked)=>{
+    const straight=dim*1000-2*75, hook=hooked?2*Math.max(12*dd,150):0;
+    const len=Math.ceil((straight+hook)/25)*25, tot=nb*len/1000;
+    return {label,n:nb,db:dd,len,tot:rnd(tot,1),wt:rnd(tot*barWtM(dd),1)};
+  };
+  const hookX=/hook|NOT/i.test(endx), hookY=/hook|NOT/i.test(endy);
+  const bbs=[ bbsRow("Bottom X",nx,B,dbx,hookX), bbsRow("Bottom Y",ny,L,dby,hookY),
+              bbsRow("Top X",txb.n,B,txb.db,true), bbsRow("Top Y",tyb.n,L,tyb.db,true) ];
+  const steelWt=rnd(bbs.reduce((a,b)=>a+b.wt,0),1);
+  const rS=inp.rateSteel||0, rC=inp.rateConc||0;
+  const cost = (rS>0||rC>0) ? rnd(steelWt*rS + (capVol+pilesVol)*rC, 0) : null;
+  if(tri) notes.push(["inf","triangular 3-pile cap: concrete on the triangle ("+rnd(capArea,2)+" m²); structural checks and the bar schedule use the bounding rectangle (conservative) — detail the triangular bar layout to suit"]);
+
   // notes & verdict
   if(!r.ok) notes.push(["bad","NOT ADEQUATE: "+r.why+" not satisfied at h = 3000 mm (governing combo "+(r.govStr||"—")+") — larger / more piles or a raft"]);
   if(endx==="NOT ENOUGH"||endy==="NOT ENOUGH") notes.push(["bad","NOT ADEQUATE: cap bars cannot be developed beyond the column face — larger cap or smaller bars"]);
@@ -672,7 +704,8 @@ function design(inp){
     nx,sx,dbx,ny,sy,dby, endx,endy,
     ntx:txb.n,stx:txb.s,dbtx:txb.db, nty:tyb.n,sty:tyb.s,dbty:tyb.db,
     colPunch:r.det.colPunch, oneWay:r.det.oneWay, pilePunch:r.det.pilePunch, stm:r.stm,
-    wself:wself(B*L), capVol:rnd(B*L*h/1000,2),
+    wself:wself(B*L), capVol, capArea:rnd(capArea,2), shape:tri?"tri":"rect", triR,
+    bbs, steelWt, pilesVol, pileLen, cost, cur:inp.cur||"",
     verdict, notes, Ps:Pgrav, PD:LD.D.P, PL:LD.L.P,
     Pu:govStrC.P, Mxu:govStrC.Mx, Myu:govStrC.My, govStr:r.govStr,
     nComboA:asd.length, nComboS:str.length, hasW, hasE, inc33:inp.inc33,
@@ -690,11 +723,17 @@ function planSVG(res){
   const col=(st)=>`var(${st})`;
   const bw=res.B*sc, bl=res.L*sc;
   const c1=res.c1/1000*sc, c2=res.c2/1000*sc, pr=res.D/1000/2*sc;
+  let capShape;
+  if(res.shape==="tri" && res.triR){
+    const R=res.triR, pstr=[90,210,330].map(a=>`${X(R*Math.cos(a*PI/180)).toFixed(1)},${Y(R*Math.sin(a*PI/180)).toFixed(1)}`).join(" ");
+    capShape=`<polygon points="${pstr}" fill="${col('--fill')}" stroke="${col('--stroke')}" stroke-width="2"/>`;
+  } else {
+    capShape=`<rect x="${(cx-bw/2).toFixed(1)}" y="${(cy-bl/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${bl.toFixed(1)}" rx="4" fill="${col('--fill')}" stroke="${col('--stroke')}" stroke-width="2"/>`;
+  }
   let piles="";
   res.pts.forEach(([x,y])=>{ piles+=`<circle cx="${X(x).toFixed(1)}" cy="${Y(y).toFixed(1)}" r="${pr.toFixed(1)}" fill="${col('--stroke')}" fill-opacity="0.35" stroke="${col('--stroke')}" stroke-width="1.5"/>`; });
   return `<svg viewBox="0 0 ${W} ${Hh}" role="img">
-    <rect x="${(cx-bw/2).toFixed(1)}" y="${(cy-bl/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${bl.toFixed(1)}" rx="4"
-      fill="${col('--fill')}" stroke="${col('--stroke')}" stroke-width="2"/>
+    ${capShape}
     ${piles}
     <rect x="${(X(0)-c1/2).toFixed(1)}" y="${(Y(0)-c2/2).toFixed(1)}" width="${c1.toFixed(1)}" height="${c2.toFixed(1)}"
       fill="${col('--col')}" stroke="${col('--ink')}" stroke-width="1.5" stroke-dasharray="4 3"/>
@@ -812,8 +851,22 @@ function render(res){
       <tr><td>Design moment M<sub>u</sub> (X face / Y face)</td><td class="num">${res.Mux.toFixed(0)} / ${res.Muy.toFixed(0)} kN·m</td></tr>
       <tr><td>Pile spacing (c/c)</td><td class="num">${res.s.toFixed(2)} m (${(res.s/ (res.D/1000)).toFixed(1)}Ø)</td></tr>
       <tr><td>Cap + backfill weight</td><td class="num">${res.wself.toFixed(0)} kN</td></tr>
-      <tr><td>Cap concrete volume</td><td class="num">${res.capVol} m³</td></tr>
     </tbody></table>
+
+    <div class="secttl">Quantities &amp; bar schedule</div>
+    <table class="res"><thead><tr><th>Bar</th><th class="num">n</th><th class="num">Ø</th><th class="num">Length (mm)</th><th class="num">Total (m)</th><th class="num">Weight (kg)</th></tr></thead>
+      <tbody>${res.bbs.map(b=>`<tr><td>${b.label}</td><td class="num">${b.n}</td><td class="num">${b.db}</td><td class="num">${b.len}</td><td class="num">${b.tot}</td><td class="num">${b.wt}</td></tr>`).join("")}
+        <tr><td><b>Steel total</b></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"><b>${res.steelWt} kg</b></td></tr></tbody></table>
+    <table class="res"><tbody>
+      <tr><td>Cap concrete (${res.shape==="tri"?"triangle, "+res.capArea+" m²":"B×L"} × h)</td><td class="num">${res.capVol} m³</td></tr>
+      <tr><td>Piles concrete (${res.n}×π/4·Ø²·L, L = ${res.pileLen} m)</td><td class="num">${res.pilesVol} m³</td></tr>
+      <tr><td>Cap steel ratio</td><td class="num">${(res.steelWt/Math.max(res.capVol,0.01)).toFixed(0)} kg/m³</td></tr>
+      ${res.cost!==null?`<tr><td>Estimated cost</td><td class="num">${res.cur} ${res.cost.toLocaleString()}</td></tr>`:""}
+    </tbody></table>
+    <div class="actions">
+      <button class="btn sec" onclick="downloadDXF()">⬇ Cap drawing (DXF)</button>
+      <button class="btn sec" onclick="downloadBBS()">⬇ Bar schedule (CSV)</button>
+    </div>
 
     <div class="secttl">Notes</div>
     <ul class="notes">${notesHtml}</ul>
@@ -927,11 +980,12 @@ function read(){
                 W:{P:g("W_P"),Mx:g("W_Mx"),My:g("W_My")},
                 E:{P:g("E_P"),Mx:g("E_Mx"),My:g("E_My")} };
   return {
-    n:+$("n").value, D:+$("D").value, loads, inc33:$("inc33").checked,
+    n:+$("n").value, D:+$("D").value, loads, inc33:$("inc33").checked, tri:$("tri").checked,
     Qa:+$("Qa").value, Qt:+$("Qt").value,
     c1:+$("c1").value, c2:+$("c2").value, fc:+$("fc").value, fy:+$("fy").value, db:+$("db").value,
     sf:+$("sf").value, edge:+$("edge").value, hmin:+$("hmin").value, eff:+$("eff").value,
     Df:+$("Df").value, gavg:+$("gavg").value, tiem:$("tiem").checked, autobar:$("autobar").checked,
+    pileLen:+$("pileLen").value, cur:$("cur").value, rateSteel:+$("rateSteel").value, rateConc:+$("rateConc").value,
     soil: capMode==="soil"?lastSoil:null, pkind:$("pkind").value
   };
 }
@@ -1049,6 +1103,10 @@ function calcSheet(inp,res){
     <div>Top X<br><b>${res.ntx}–Ø${res.dbtx} @ ${Math.round(res.stx)} mm</b><br>As,req ${Math.round(res.AsxTop)} mm²</div>
     <div>Top Y<br><b>${res.nty}–Ø${res.dbty} @ ${Math.round(res.sty)} mm</b><br>As,req ${Math.round(res.AsyTop)} mm²</div>
   </div>
+  <table class="kv" style="margin-top:6px">
+    <tr><td>Steel (BBS total)</td><td>${res.steelWt} kg${res.cost!=null?` &nbsp;·&nbsp; est. cost ${res.cur} ${res.cost.toLocaleString()}`:""}</td></tr>
+    <tr><td>Concrete</td><td>cap ${res.capVol} m³ (${res.shape==="tri"?"triangular":"rectangular"}) &nbsp;·&nbsp; piles ${res.pilesVol} m³ (L ${res.pileLen} m)</td></tr>
+  </table>
   ${stm?`<h3>${res.soil?6:5} · Strut-and-tie (BNBC Appendix I)</h3>
   <table class="kv">
     <tr><td>θ<sub>min</sub> / lever z</td><td>${stm.th_min}° (≥25°) · z ${stm.z} mm</td></tr>
@@ -1068,6 +1126,53 @@ function openCalcSheet(){
   const w=window.open("","_blank");
   if(!w){ alert("Allow pop-ups to open the calculation sheet, then try again."); return; }
   w.document.open(); w.document.write(calcSheet(LAST.inp,LAST.res)); w.document.close(); w.focus();
+}
+
+/* ------------------------------- DXF (plan + section) & BBS (CSV) export ------------------------------- */
+function _dxf(res){
+  const e=[];
+  const LN=(l,x1,y1,x2,y2)=>e.push(`0\nLINE\n8\n${l}\n10\n${x1.toFixed(1)}\n20\n${y1.toFixed(1)}\n11\n${x2.toFixed(1)}\n21\n${y2.toFixed(1)}`);
+  const CR=(l,cx,cy,r)=>e.push(`0\nCIRCLE\n8\n${l}\n10\n${cx.toFixed(1)}\n20\n${cy.toFixed(1)}\n40\n${r.toFixed(1)}`);
+  const TX=(l,x,y,h,s)=>e.push(`0\nTEXT\n8\n${l}\n10\n${x.toFixed(1)}\n20\n${y.toFixed(1)}\n40\n${h}\n1\n${s}`);
+  const B=res.B*1000, Lm=res.L*1000, cxo=(res.cxo||0)*1000, cyo=(res.cyo||0)*1000;
+  if(res.shape==="tri" && res.triR){
+    const R=res.triR*1000, v=[90,210,330].map(a=>[R*Math.cos(a*PI/180), R*Math.sin(a*PI/180)]);
+    for(let i=0;i<3;i++){ LN("CAP",v[i][0],v[i][1],v[(i+1)%3][0],v[(i+1)%3][1]); }
+  } else {
+    LN("CAP",-B/2,-Lm/2,B/2,-Lm/2); LN("CAP",B/2,-Lm/2,B/2,Lm/2); LN("CAP",B/2,Lm/2,-B/2,Lm/2); LN("CAP",-B/2,Lm/2,-B/2,-Lm/2);
+  }
+  res.pts.forEach(([x,y])=>CR("PILE",x*1000-cxo,y*1000-cyo,res.D/2));
+  const c1=res.c1,c2=res.c2, ox=-cxo, oy=-cyo;
+  LN("COL",ox-c1/2,oy-c2/2,ox+c1/2,oy-c2/2);LN("COL",ox+c1/2,oy-c2/2,ox+c1/2,oy+c2/2);
+  LN("COL",ox+c1/2,oy+c2/2,ox-c1/2,oy+c2/2);LN("COL",ox-c1/2,oy+c2/2,ox-c1/2,oy-c2/2);
+  let tx=B/2+500, ty=Lm/2;
+  const line=(s,h)=>{ TX("TEXT",tx,ty,h||60,s); ty-=(h||60)*2.2; };
+  line(`PILE CAP - ${res.n} PILES`,90);
+  line(`CAP ${res.B.toFixed(2)}x${res.L.toFixed(2)}m  h=${Math.round(res.h)}mm  d=${Math.round(res.d)}mm`);
+  line(`PILE DIA ${res.D}mm  SPACING ${res.s.toFixed(2)}m`);
+  line(`BOT X ${res.nx}-D${res.dbx}@${Math.round(res.sx)}   BOT Y ${res.ny}-D${res.dby}@${Math.round(res.sy)}`);
+  line(`TOP X ${res.ntx}-D${res.dbtx}@${Math.round(res.stx)}   TOP Y ${res.nty}-D${res.dbty}@${Math.round(res.sty)}`);
+  line(`CONCRETE ${res.capVol} m3   STEEL ${res.steelWt} kg`);
+  const sy0=-Lm/2-900, h=res.h;
+  LN("SEC",-B/2,sy0,B/2,sy0); LN("SEC",B/2,sy0,B/2,sy0-h); LN("SEC",B/2,sy0-h,-B/2,sy0-h); LN("SEC",-B/2,sy0-h,-B/2,sy0);
+  LN("REBAR",-B/2+75,sy0-h+75,B/2-75,sy0-h+75);
+  LN("REBAR",-B/2+75,sy0-75,B/2-75,sy0-75);
+  res.pts.forEach(([x,y],i)=>{ const px=x*1000-cxo; LN("PILE",px-res.D/2,sy0-h,px-res.D/2,sy0-h-1000); LN("PILE",px+res.D/2,sy0-h,px+res.D/2,sy0-h-1000); });
+  TX("TEXT",-B/2,sy0-h-1200,60,`SECTION A-A   h=${Math.round(h)}mm`);
+  return `0\nSECTION\n2\nENTITIES\n${e.join("\n")}\n0\nENDSEC\n0\nEOF\n`;
+}
+function _download(name,text,mime){
+  const blob=new Blob([text],{type:mime||"text/plain"}), url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+}
+function downloadDXF(){ if(!LAST) return; _download("pile_cap_"+LAST.res.n+"pile.dxf", _dxf(LAST.res), "application/dxf"); }
+function downloadBBS(){ if(!LAST) return; const r=LAST.res;
+  let csv="Bar,n,Dia(mm),Length(mm),Total(m),Weight(kg)\n";
+  r.bbs.forEach(b=>csv+=`${b.label},${b.n},${b.db},${b.len},${b.tot},${b.wt}\n`);
+  csv+=`Steel total,,,,,${r.steelWt}\n,,,,,\n`;
+  csv+=`Cap concrete (m3),,,,,${r.capVol}\nPiles concrete (m3),,,,,${r.pilesVol}\n`;
+  _download("pile_cap_"+r.n+"pile_BBS.csv", csv, "text/csv");
 }
 
 // theme toggle
