@@ -156,41 +156,22 @@ footer{margin:22px 0 10px;color:var(--muted);font-size:12px;text-align:center}
               <input type="number" id="D" value="500" min="200" max="1500" step="10"/>
             </div>
           </div>
-          <label class="f" style="margin-top:8px">Load case</label>
-          <div class="seg" id="mode">
-            <button type="button" data-m="axial" class="on">Axial only</button>
-            <button type="button" data-m="moment">Axial + moment</button>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <div>
-              <label class="f"><b>Dead load D</b> (kN)</label>
-              <input type="number" id="PD" value="2600" min="0" step="50"/>
-            </div>
-            <div>
-              <label class="f"><b>Live load L</b> (kN)</label>
-              <input type="number" id="PL" value="1400" min="0" step="50"/>
-            </div>
-          </div>
-          <div class="hint" style="margin-top:4px">Service = D + L (sizes the pile count) · Factored = 1.2D + 1.6L
-            (cap design, BNBC §2.7.2.1). Gravity combination — check W/E combinations separately.</div>
-          <div class="row" id="momRow" style="margin-top:8px;display:none">
-            <div>
-              <label class="f"><b>Mx</b> dead (kN·m)</label>
-              <input type="number" id="MxD" value="0" step="10"/>
-            </div>
-            <div>
-              <label class="f"><b>Mx</b> live (kN·m)</label>
-              <input type="number" id="MxL" value="0" step="10"/>
-            </div>
-            <div>
-              <label class="f"><b>My</b> dead (kN·m)</label>
-              <input type="number" id="MyD" value="0" step="10"/>
-            </div>
-            <div>
-              <label class="f"><b>My</b> live (kN·m)</label>
-              <input type="number" id="MyL" value="0" step="10"/>
-            </div>
-          </div>
+          <label class="f" style="margin-top:8px">Load cases (unfactored, per column at the cap top)</label>
+          <table class="bh" id="loadtbl">
+            <thead><tr><th>Case</th><th>P (kN)</th><th>Mx (kN·m)</th><th>My (kN·m)</th></tr></thead>
+            <tbody>
+              <tr><td>Dead D</td><td><input type="number" id="D_P" value="2600" step="50"></td><td><input type="number" id="D_Mx" value="0" step="10"></td><td><input type="number" id="D_My" value="0" step="10"></td></tr>
+              <tr><td>Live L</td><td><input type="number" id="L_P" value="1400" step="50"></td><td><input type="number" id="L_Mx" value="0" step="10"></td><td><input type="number" id="L_My" value="0" step="10"></td></tr>
+              <tr><td>Wind W</td><td><input type="number" id="W_P" value="0" step="50"></td><td><input type="number" id="W_Mx" value="0" step="10"></td><td><input type="number" id="W_My" value="0" step="10"></td></tr>
+              <tr><td>Seismic E</td><td><input type="number" id="E_P" value="0" step="50"></td><td><input type="number" id="E_Mx" value="0" step="10"></td><td><input type="number" id="E_My" value="0" step="10"></td></tr>
+            </tbody>
+          </table>
+          <label class="chk" style="margin-top:8px"><input type="checkbox" id="inc33"/> +33% allowable Qa / Qt for
+            W / E (transient) combinations</label>
+          <div class="hint" style="margin-top:4px">Combinations are auto-generated — service (D, D+L, D±0.6W, D±0.7E,
+            D+0.75L±…, 0.6D±…) for the pile check; strength (1.4D, 1.2D+1.6L, 1.2D+1.0L±1.0W/E, 0.9D±1.0W/E) for
+            the cap; W and E taken ±. The worst combination governs. Note: BNBC §3.9.3.2 ties the 33% increase to
+            shallow bearing — apply it to piles only if your geotechnical report allows it.</div>
         </fieldset>
 
         <fieldset>
@@ -474,6 +455,36 @@ function stm_pile_cap(pts,R,c1,c2,d,fc,fy,D,wt=0){        // c1,c2,D in m; d,wt 
     ok: th_min>=THETA_MIN-1e-9 && worst<=1 && bear<=1};
 }
 
+/* ---- BNBC/ACI load combinations from the D/L/W/E cases (W, E taken ±) ---- */
+function COMBOS(LD){
+  const zero=o=>(Math.abs(o.P)+Math.abs(o.Mx)+Math.abs(o.My))<1e-9;
+  const hasW=!zero(LD.W), hasE=!zero(LD.E);
+  const c=(name,cD,cL,cW,cE,lat)=>({name,
+    P:cD*LD.D.P+cL*LD.L.P+cW*LD.W.P+cE*LD.E.P,
+    Mx:cD*LD.D.Mx+cL*LD.L.Mx+cW*LD.W.Mx+cE*LD.E.Mx,
+    My:cD*LD.D.My+cL*LD.L.My+cW*LD.W.My+cE*LD.E.My, lat, dfac:cD});
+  const asd=[c("D",1,0,0,0,false), c("D+L",1,1,0,0,false)];
+  if(hasW) asd.push(c("D+0.6W",1,0,0.6,0,true),c("D−0.6W",1,0,-0.6,0,true),
+    c("D+0.75L+0.45W",1,0.75,0.45,0,true),c("D+0.75L−0.45W",1,0.75,-0.45,0,true),
+    c("0.6D+0.6W",0.6,0,0.6,0,true),c("0.6D−0.6W",0.6,0,-0.6,0,true));
+  if(hasE) asd.push(c("D+0.7E",1,0,0,0.7,true),c("D−0.7E",1,0,0,-0.7,true),
+    c("D+0.75L+0.525E",1,0.75,0,0.525,true),c("D+0.75L−0.525E",1,0.75,0,-0.525,true),
+    c("0.6D+0.7E",0.6,0,0,0.7,true),c("0.6D−0.7E",0.6,0,0,-0.7,true));
+  const str=[c("1.4D",1.4,0,0,0,false), c("1.2D+1.6L",1.2,1.6,0,0,false)];
+  if(hasW) str.push(c("1.2D+1.0L+1.0W",1.2,1.0,1.0,0,true),c("1.2D+1.0L−1.0W",1.2,1.0,-1.0,0,true),
+    c("0.9D+1.0W",0.9,0,1.0,0,true),c("0.9D−1.0W",0.9,0,-1.0,0,true));
+  if(hasE) str.push(c("1.2D+1.0L+1.0E",1.2,1.0,0,1.0,true),c("1.2D+1.0L−1.0E",1.2,1.0,0,-1.0,true),
+    c("0.9D+1.0E",0.9,0,0,1.0,true),c("0.9D−1.0E",0.9,0,0,-1.0,true));
+  return {asd,str,hasW,hasE};
+}
+function _stmEnvJS(env,t){
+  if(!env) return Object.assign({},t);
+  const o=Object.assign({},env);
+  for(const k of ["Tx","Ty","AsTx","AsTy","strut","pileNode","colNode"]) o[k]=Math.max(env[k],t[k]);
+  o.th_min=Math.min(env.th_min,t.th_min); o.z=Math.min(env.z,t.z); o.ok=env.ok&&t.ok; o.bn=t.bn;
+  return o;
+}
+
 /* ------------------------------------- main design ------------------------------------- */
 function design(inp){
   const D=inp.D/1000;                                  // m
@@ -484,52 +495,58 @@ function design(inp){
   const c1=inp.c1/1000, c2=inp.c2/1000, Dm=inp.D;
   const gammaW=inp.gavg*inp.Df;                        // γ·Df (kN/m² of plan)
   const wself=(A)=>gammaW*A;
-  // loads: service = D + L, factored = 1.2D + 1.6L (BNBC §2.7.2.1); tie beams option → piles axial only
-  let Mxs=inp.Mxs, Mys=inp.Mys, Mxu=inp.Mxu, Myu=inp.Myu;
-  if(inp.tiem){ Mxs=0; Mys=0; Mxu=0; Myu=0; }
-  const Ps=inp.Ps, Pu=inp.Pu;
-
   const notes=[];
 
-  // smallest standard group for axial alone (reference hint)
+  // load cases → combinations; tie beams option zeroes all moments (piles axial only)
+  const LD=JSON.parse(JSON.stringify(inp.loads));
+  if(inp.tiem){ for(const k of ["D","L","W","E"]){ LD[k].Mx=0; LD[k].My=0; } }
+  const {asd,str,hasW,hasE}=COMBOS(LD);
+  const f33=c=>(c.lat && inp.inc33)?1.33:1.0;          // optional +33% allowable for W/E combos
+  const Pgrav=LD.D.P+LD.L.P;                           // service gravity for the count hint
+
+  // smallest standard group for gravity axial alone (reference hint)
   let n_ax=null;
   for(const nn of LAYOUTS){
     const pl=pile_layout(nn,s), xs=pl.map(p=>p[0]), ys=pl.map(p=>p[1]);
     const A0=ceil_to(Math.max(...xs)-Math.min(...xs)+2*edge,3*IN/1000)*ceil_to(Math.max(...ys)-Math.min(...ys)+2*edge,3*IN/1000);
-    if((Ps+wself(A0))/nn<=Qa){ n_ax=nn; break; }
+    if((Pgrav+wself(A0))/nn<=Qa){ n_ax=nn; break; }
   }
 
   const n=inp.n;
   const pts=pile_layout(n,s);
   const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   const Sx2=pts.reduce((a,p)=>a+p[0]*p[0],0), Sy2=pts.reduce((a,p)=>a+p[1]*p[1],0);
+  const Sx2e=Sx2||1e-9, Sy2e=Sy2||1e-9;
   const B=ceil_to(Math.max(...xs)-Math.min(...xs)+2*edge,3*IN/1000);
   const L=ceil_to(Math.max(...ys)-Math.min(...ys)+2*edge,3*IN/1000);
   // cap is centred on the pile bounding box (so every pile keeps its edge distance — fixes 3-pile etc.)
   const cxo=(Math.max(...xs)+Math.min(...xs))/2, cyo=(Math.max(...ys)+Math.min(...ys))/2;
 
   // instability: a single line of piles cannot resist a moment across the line
-  const unstable=(Sx2<1e-9&&Math.abs(Mys)>1e-6)||(Sy2<1e-9&&Math.abs(Mxs)>1e-6);
+  const anyMx=[...asd,...str].some(c=>Math.abs(c.Mx)>1e-6), anyMy=[...asd,...str].some(c=>Math.abs(c.My)>1e-6);
+  const unstable=(Sx2<1e-9&&anyMy)||(Sy2<1e-9&&anyMx);
   if(unstable) notes.push(["bad","NOT ADEQUATE: "+n+" pile(s) in a line cannot resist the base moment — add a pile line, or let tie/grade beams take the moment (advanced option)"]);
 
-  // ---- service pile loads (sizing): P + cap/backfill weight, rigid cap distribution ----
-  const Pt=Ps+wself(B*L);
-  let wc=-1e9, wt=1e9, gov="service";
-  for(const [x,y] of pts){
-    const mTerm=(Sx2>1e-9?Math.abs(Mys)*Math.abs(x)/Sx2:0)+(Sy2>1e-9?Math.abs(Mxs)*Math.abs(y)/Sy2:0);
-    wc=Math.max(wc, Pt/n+mTerm);
-    wt=Math.min(wt, Pt/n-mTerm);
+  // ---- sizing: envelope the service (ASD) combinations ----
+  let wc=-1e9, wt=1e9, govC=null, govT=null, compUtil=0, upUtil=0, compFail=null, upFail=null;
+  for(const c of asd){
+    const Pt=c.P + wself(B*L)*c.dfac;                  // cap+backfill weight scaled by the combo's D factor
+    const QaC=Qa*f33(c), QtC=Qt*f33(c);
+    for(const [x,y] of pts){
+      const mTerm=Math.abs(c.My)*Math.abs(x)/Sx2e + Math.abs(c.Mx)*Math.abs(y)/Sy2e;
+      const Pi=Pt/n+mTerm, Pmin=Pt/n-mTerm;
+      if(Pi>wc){ wc=Pi; govC=c.name; }
+      if(Pmin<wt){ wt=Pmin; govT=c.name; }
+      const u=QaC>0?Pi/QaC:Infinity; if(u>compUtil){ compUtil=u; if(u>1&&!compFail) compFail=c.name; }
+      const ut=Pmin<0?(QtC>0?(-Pmin)/QtC:Infinity):0; if(ut>upUtil){ upUtil=ut; if(ut>1&&!upFail) upFail=c.name; }
+    }
   }
-  const pileComp_ok=wc<=Qa+1e-6, pileUp_ok=wt>=-Qt-1e-6;
-
-  // ---- factored pile reactions (strength) for cap design: column load only ----
-  const Sx2e=Sx2||1e-9, Sy2e=Sy2||1e-9;
-  const R=pts.map(([x,y])=>Pu/n + Myu*x/Sx2e - Mxu*y/Sy2e);
+  const pileComp_ok=compUtil<=1+1e-6, pileUp_ok=upUtil<=1+1e-6;
 
   const cov=150;                                       // 75 embedment + 75 cover
   const wt_stm=db+2*75.0;
-
-  function face_sum(axis,sign,offset){                 // Σ reactions beyond a section (ACI 13.4.2.5 linear)
+  const reactions=c=>pts.map(([x,y])=>c.P/n + c.My*x/Sx2e - c.Mx*y/Sy2e);
+  function face_sum(R,axis,sign,offset){               // Σ reactions beyond a section (ACI 13.4.2.5 linear)
     let tot=0,mom=0;
     for(let k=0;k<pts.length;k++){
       const u=(axis==="x"?pts[k][0]:pts[k][1])*sign;
@@ -540,54 +557,55 @@ function design(inp){
     return [tot,mom];
   }
 
+  // ---- strength: envelope the factored combinations at each thickness ----
   function checkAt(h){
     const d=h-cov-db;
-    let ok=true, why="", Mux=0, Muy=0, MuxT=0, MuyT=0;
+    let ok=true, why="", Mux=0, Muy=0, MuxT=0, MuyT=0, govStr=null, worstR=0;
     const det={colPunch:0, oneWay:0, pilePunch:0};
-    // column punching: closed perimeter d/2, deduct piles inside it
-    let inside=0;
-    for(let k=0;k<pts.length;k++){
-      const x=pts[k][0], y=pts[k][1];
-      if(Math.abs(x)*1000<(inp.c1+d)/2 && Math.abs(y)*1000<(inp.c2+d)/2) inside+=R[k];
-    }
-    if(n>1){
-      det.colPunch=punching_ratio_interior(fc,inp.c1,inp.c2,d,Math.max(Pu-inside,0),Mxu,Myu);
-      if(det.colPunch>1){ ok=false; why="column two-way (punching) shear"; }
-    }
-    // one-way shear at d from the four column faces + flexure moments at the faces
-    for(const [axis,sign] of [["x",1],["x",-1],["y",1],["y",-1]]){
-      const half=(axis==="x"?c1:c2)/2;
-      const [V]=face_sum(axis,sign,half+d/1000);
-      const [,Mf]=face_sum(axis,sign,half);
-      const width=(axis==="x"?L:B)*1000;
-      const phiV=0.75*0.17*sqrt(fc)*width*d/1000;
-      det.oneWay=Math.max(det.oneWay, phiV>0?V/phiV:0);
-      if(V>phiV){ ok=false; why="one-way shear at d from the column face"; }
-      if(axis==="x"){ Mux=Math.max(Mux,Mf); MuxT=Math.max(MuxT,-Mf); }
-      else { Muy=Math.max(Muy,Mf); MuyT=Math.max(MuyT,-Mf); }
-    }
-    // corner/edge pile punching
-    for(let k=0;k<pts.length;k++){
-      const x=pts[k][0], y=pts[k][1], r=R[k];
-      if(Math.abs(x)*1000<inp.c1/2 && Math.abs(y)*1000<inp.c2/2) continue;  // under the column
-      const ex_=B/2-Math.abs(x), ey_=L/2-Math.abs(y);
-      let b0;
-      if(ex_*1000<Dm/2+d && ey_*1000<Dm/2+d) b0=PI*(Dm+d)/4+ex_*1000+ey_*1000;
-      else if(Math.min(ex_,ey_)*1000<Dm/2+d) b0=PI*(Dm+d)/2+2*Math.min(ex_,ey_)*1000;
-      else b0=PI*(Dm+d);
-      const vc=Math.min(0.33,0.083*(2+20*d/b0))*sqrt(fc);
-      const phi=0.75*vc*b0*d/1000;
-      det.pilePunch=Math.max(det.pilePunch, phi>0?r/phi:0);
-      if(r>phi){ ok=false; why="pile punching (corner/edge pile)"; }
+    let stm=null;
+    for(const c of str){
+      const R=reactions(c);
+      let cmax=0;
+      if(n>1){
+        let inside=0;
+        for(let k=0;k<pts.length;k++){ const x=pts[k][0], y=pts[k][1];
+          if(Math.abs(x)*1000<(inp.c1+d)/2 && Math.abs(y)*1000<(inp.c2+d)/2) inside+=R[k]; }
+        const cp=punching_ratio_interior(fc,inp.c1,inp.c2,d,Math.max(c.P-inside,0),c.Mx,c.My);
+        det.colPunch=Math.max(det.colPunch,cp); cmax=Math.max(cmax,cp);
+        if(cp>1){ ok=false; why="column two-way (punching) shear"; }
+      }
+      for(const [axis,sign] of [["x",1],["x",-1],["y",1],["y",-1]]){
+        const half=(axis==="x"?c1:c2)/2;
+        const [V]=face_sum(R,axis,sign,half+d/1000);
+        const [,Mf]=face_sum(R,axis,sign,half);
+        const width=(axis==="x"?L:B)*1000, phiV=0.75*0.17*sqrt(fc)*width*d/1000;
+        const rr=phiV>0?V/phiV:0; det.oneWay=Math.max(det.oneWay,rr); cmax=Math.max(cmax,rr);
+        if(V>phiV){ ok=false; why="one-way shear at d from the column face"; }
+        if(axis==="x"){ Mux=Math.max(Mux,Mf); MuxT=Math.max(MuxT,-Mf); }
+        else { Muy=Math.max(Muy,Mf); MuyT=Math.max(MuyT,-Mf); }
+      }
+      for(let k=0;k<pts.length;k++){
+        const x=pts[k][0], y=pts[k][1], rp=R[k];
+        if(Math.abs(x)*1000<inp.c1/2 && Math.abs(y)*1000<inp.c2/2) continue;
+        const ex_=B/2-Math.abs(x), ey_=L/2-Math.abs(y);
+        let b0;
+        if(ex_*1000<Dm/2+d && ey_*1000<Dm/2+d) b0=PI*(Dm+d)/4+ex_*1000+ey_*1000;
+        else if(Math.min(ex_,ey_)*1000<Dm/2+d) b0=PI*(Dm+d)/2+2*Math.min(ex_,ey_)*1000;
+        else b0=PI*(Dm+d);
+        const vc=Math.min(0.33,0.083*(2+20*d/b0))*sqrt(fc), phi=0.75*vc*b0*d/1000;
+        const rr=phi>0?rp/phi:0; det.pilePunch=Math.max(det.pilePunch,rr); cmax=Math.max(cmax,rr);
+        if(rp>phi){ ok=false; why="pile punching (corner/edge pile)"; }
+      }
+      if(n>1){
+        const stmc=stm_pile_cap(pts,R,c1,c2,d,fc,fy,D,wt_stm);
+        stm=_stmEnvJS(stm,stmc); cmax=Math.max(cmax,stmc.strut,stmc.pileNode);
+        if(!stmc.ok){ ok=false; why=(stmc.th_min<THETA_MIN)?"strut angle < 25° (§I.2.5)":"strut / pile-node stress (§I.3, I.5)"; }
+      }
+      if(cmax>worstR){ worstR=cmax; govStr=c.name; }
     }
     let Asx=as_flexure(Mux,L*1000,d,fc,fy), Asy=as_flexure(Muy,B*1000,d,fc,fy);
     if(!isFinite(Asx)||!isFinite(Asy)){ ok=false; why="flexure (section too shallow)"; }
-    let stm=null;
-    if(n>1){
-      stm=stm_pile_cap(pts,R,c1,c2,d,fc,fy,D,wt_stm);
-      if(!stm.ok){ ok=false; why=(stm.th_min<THETA_MIN)?"strut angle < 25° (§I.2.5)":"strut / pile-node stress (§I.3, I.5)"; }
-    }
-    return {d,ok,why,Mux,Muy,MuxT,MuyT,Asx,Asy,stm,det};
+    return {d,ok,why,Mux,Muy,MuxT,MuyT,Asx,Asy,stm,det,govStr};
   }
 
   let h=ceil_in(Math.max(inp.hmin,600,300+cov+db));
@@ -620,44 +638,45 @@ function design(inp){
   if(r.Mux<1 && endx==="NOT ENOUGH") endx="90° hooks (min. steel)";
   if(r.Muy<1 && endy==="NOT ENOUGH") endy="90° hooks (min. steel)";
 
+  const govStrC = str.find(c=>c.name===r.govStr) || str[1] || str[0];
+
   // notes & verdict
-  if(!r.ok) notes.push(["bad","NOT ADEQUATE: "+r.why+" not satisfied at h = 3000 mm — larger piles / more piles / a raft"]);
+  if(!r.ok) notes.push(["bad","NOT ADEQUATE: "+r.why+" not satisfied at h = 3000 mm (governing combo "+(r.govStr||"—")+") — larger / more piles or a raft"]);
   if(endx==="NOT ENOUGH"||endy==="NOT ENOUGH") notes.push(["bad","NOT ADEQUATE: cap bars cannot be developed beyond the column face — larger cap or smaller bars"]);
-  if(!pileComp_ok) notes.push(["bad","NOT ADEQUATE: max pile "+wc.toFixed(0)+" kN > Qa "+Qa.toFixed(0)+" kN"+(n_ax&&n_ax>n?` — try ${n_ax} piles`:(n_ax===null?" — even 16 piles overloaded, use larger piles":""))]);
-  if(!pileUp_ok) notes.push(["bad","NOT ADEQUATE: pile tension "+(-wt).toFixed(0)+" kN > Qt "+Qt.toFixed(0)+" kN (uplift)"]);
-  else if(wt<0) notes.push(["rev","pile tension "+(-wt).toFixed(0)+" kN ≤ Qt — reinforce the pile for tension and anchor its bars into the cap"]);
+  if(!pileComp_ok) notes.push(["bad","NOT ADEQUATE: pile compression over allowable (util "+compUtil.toFixed(2)+") in combo "+compFail+" — max pile "+wc.toFixed(0)+" kN"+(n_ax&&n_ax>n?` — try ${n_ax} piles`:(n_ax===null?" — even 16 piles overloaded, use larger piles":""))]);
+  if(!pileUp_ok) notes.push(["bad","NOT ADEQUATE: pile tension over Qt (util "+upUtil.toFixed(2)+") in combo "+upFail+" — min pile "+wt.toFixed(0)+" kN (uplift)"]);
+  else if(wt<0) notes.push(["rev","pile tension "+(-wt).toFixed(0)+" kN ≤ Qt (combo "+govT+") — reinforce the pile for tension and anchor its bars into the cap"]);
   if(inp.tiem) notes.push(["inf","tie/grade beams assumed to take the column base moments — piles designed for axial load only"]);
   if(n>1 && r.stm){
     notes.push(["inf","strut-and-tie (BNBC App. I): θmin "+r.stm.th_min+"° (≥25°), bottle strut βs 0.60, pile-node βn "+r.stm.bn+"; bottom bars = max(flexure, STM ties"+(stmGov?` — ties govern ${stmGov}`:"")+")"]);
     if(r.stm.colNode>1) notes.push(["rev","REVIEW: column-node bearing "+r.stm.colNode.toFixed(2)+"× φ·0.85·f′c(cap) — carry the excess with column dowels into the cap (§6.8.8)"]);
     if(stmGov) notes.push(["inf","place the governing tie bars in bands over the pile lines (pile Ø + 2× cover wide), anchored beyond the pile centres (§I.4.3)"]);
   }
-  // group (block) uplift
-  if(wt<0 && n>1 && inp.Df>0){
-    const up=Pt-2*(Math.abs(Mxs)+Math.abs(Mys));   // indicative; use min pile already captured. keep simple note
-  }
   if(bx.tight||by.tight) notes.push(["rev",`REVIEW: bottom bars at the selected Ø${db} give clear spacing < max(75, 2Ø) — use two layers, a larger cap, a larger Ø, or tick "auto-increase bar Ø"`]);
   if(r.MuxT>1||r.MuyT>1) notes.push(["inf","top mat designed for hogging (piles in tension / cantilever): Mu top X "+r.MuxT.toFixed(0)+" / Y "+r.MuyT.toFixed(0)+" kN·m"]);
-  else notes.push(["inf","top mat = minimum steel (nominal top mesh) — no hogging from this load case"]);
+  else notes.push(["inf","top mat = minimum steel (nominal top mesh) — no hogging from these combinations"]);
   if(inp.soil) notes.push(["inf","Qa "+inp.Qa.toFixed(0)+" / Qt "+inp.Qt.toFixed(0)+" kN from the SPT soil report (§3.10): "+(inp.soil.kind||inp.pkind)+" pile Ø"+inp.D+" mm, L "+inp.soil.L+" m, tip "+inp.soil.tip+" m in "+inp.soil.soil_t+" (N "+inp.soil.Nt+"); Qs "+inp.soil.Qs.toFixed(0)+", Qb "+inp.soil.Qb.toFixed(0)+", W "+inp.soil.W.toFixed(0)+" kN"]);
-  if(n===n_ax) notes.push(["inf","pile count governed by axial load: (D+L + cap weight) / Qa"]);
-  else if(n_ax!==null && n>n_ax) notes.push(["inf",`axial load alone would need only ${n_ax} piles — the extra piles resist the base moment / tension`]);
+  if(n===n_ax) notes.push(["inf","pile count governed by gravity axial: (D+L + cap weight) / Qa"]);
+  else if(n_ax!==null && n>n_ax) notes.push(["inf",`gravity axial alone would need only ${n_ax} piles — the extra piles resist the base moment / tension / lateral combos`]);
   if(eff<1) notes.push(["inf","group efficiency "+eff+" applied to Qa"]);
-  notes.push(["inf","sizing uses the service load D+L; thickness, shear and steel use the factored load 1.2D+1.6L. Single gravity combination — check W/E combinations separately."]);
+  if((hasW||hasE)&&inp.inc33) notes.push(["inf","+33% allowable (Qa/Qt) applied to the W/E combinations (user option; BNBC §3.9.3.2 intends this for shallow bearing)"]);
+  notes.push(["inf",`${asd.length} service + ${str.length} strength combinations evaluated — governing: sizing ${govC}, strength ${r.govStr||"—"}`]);
 
   const bad=notes.some(x=>x[0]==="bad"), rev=notes.some(x=>x[0]==="rev");
   const verdict=bad?"bad":(rev?"review":"ok");
 
   return {
     n, pts, B, L, h, d, s, edge, D:inp.D, c1:inp.c1, c2:inp.c2, cxo, cyo,
-    wc, wt, Qa, Qt, pileComp_ok, pileUp_ok, n_ax,
+    wc, wt, Qa, Qt, pileComp_ok, pileUp_ok, compUtil, upUtil, govC, govT, n_ax,
     Mux:r.Mux, Muy:r.Muy, MuxT:r.MuxT, MuyT:r.MuyT, Asx, Asy, AsxTop, AsyTop, stmGov,
     nx,sx,dbx,ny,sy,dby, endx,endy,
     ntx:txb.n,stx:txb.s,dbtx:txb.db, nty:tyb.n,sty:tyb.s,dbty:tyb.db,
     colPunch:r.det.colPunch, oneWay:r.det.oneWay, pilePunch:r.det.pilePunch, stm:r.stm,
     wself:wself(B*L), capVol:rnd(B*L*h/1000,2),
-    verdict, notes, Ps, Pu, Mxu, Myu, autobar:inp.autobar, soil:inp.soil||null, pkind:inp.pkind,
-    PD:inp.PD, PL:inp.PL
+    verdict, notes, Ps:Pgrav, PD:LD.D.P, PL:LD.L.P,
+    Pu:govStrC.P, Mxu:govStrC.Mx, Myu:govStrC.My, govStr:r.govStr,
+    nComboA:asd.length, nComboS:str.length, hasW, hasE, inc33:inp.inc33,
+    autobar:inp.autobar, soil:inp.soil||null, pkind:inp.pkind
   };
 }
 
@@ -721,8 +740,8 @@ function render(res){
   const barTxt=(n,s,d)=>`${n}–Ø${d} @ ${Math.round(s)} mm`;
   const stm=res.stm;
   let checks=`
-    <tr><td>Pile compression (service)</td><td class="num">${res.wc.toFixed(0)} / ${res.Qa.toFixed(0)} kN</td><td class="num">${ratioPill(res.Qa>0?res.wc/res.Qa:null)}</td></tr>
-    <tr><td>Pile uplift (service)</td><td class="num">${res.wt.toFixed(0)} kN · Qt ${res.Qt.toFixed(0)}</td><td class="num">${res.wt>=-res.Qt-1e-6?'<span class="pill ok">OK ✓</span>':'<span class="pill bad">✗</span>'}</td></tr>`;
+    <tr><td>Pile compression (service · ${res.govC})</td><td class="num">${res.wc.toFixed(0)} kN · Qa ${res.Qa.toFixed(0)}</td><td class="num">${ratioPill(res.compUtil)}</td></tr>
+    <tr><td>Pile uplift (service · ${res.govT})</td><td class="num">min ${res.wt.toFixed(0)} kN · Qt ${res.Qt.toFixed(0)}</td><td class="num">${res.upUtil>1e-6?ratioPill(res.upUtil):'<span class="pill ok">none ✓</span>'}</td></tr>`;
   if(res.n>1){
     checks+=`
     <tr><td>Column two-way (punching) v<sub>u</sub>/φv<sub>c</sub></td><td class="num">incl. γ<sub>v</sub>·M<sub>u</sub></td><td class="num">${ratioPill(res.colPunch)}</td></tr>
@@ -786,8 +805,10 @@ function render(res){
 
     <div class="secttl">Flexure &amp; quantities</div>
     <table class="res"><tbody>
-      <tr><td>Service load (D + L)</td><td class="num">${res.Ps.toFixed(0)} kN (D ${res.PD}, L ${res.PL})</td></tr>
-      <tr><td>Factored load P<sub>u</sub> = 1.2D + 1.6L</td><td class="num">${res.Pu.toFixed(0)} kN${res.Myu||res.Mxu?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
+      <tr><td>Service gravity D + L</td><td class="num">${res.Ps.toFixed(0)} kN (D ${res.PD}, L ${res.PL})</td></tr>
+      <tr><td>Load combinations</td><td class="num">${res.nComboA} service · ${res.nComboS} strength${(res.hasW||res.hasE)?(res.inc33?" · +33% on W/E":" · W/E, no 33%"):""}</td></tr>
+      <tr><td>Governing combo (size / strength)</td><td class="num">${res.govC} / ${res.govStr||"—"}</td></tr>
+      <tr><td>Factored P<sub>u</sub> (governing)</td><td class="num">${res.Pu.toFixed(0)} kN${res.Myu||res.Mxu?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
       <tr><td>Design moment M<sub>u</sub> (X face / Y face)</td><td class="num">${res.Mux.toFixed(0)} / ${res.Muy.toFixed(0)} kN·m</td></tr>
       <tr><td>Pile spacing (c/c)</td><td class="num">${res.s.toFixed(2)} m (${(res.s/ (res.D/1000)).toFixed(1)}Ø)</td></tr>
       <tr><td>Cap + backfill weight</td><td class="num">${res.wself.toFixed(0)} kN</td></tr>
@@ -850,14 +871,6 @@ function pileCapacity(layers,D,L,cutoff,kind,FS,fs_skin,fs_end,lbmode,gw){
 const $=id=>document.getElementById(id);
 (function initN(){ const sel=$("n"); LAYOUTS.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+(v===1?" pile":" piles");sel.appendChild(o);}); sel.value=4; })();
 
-let mode="axial";
-document.querySelectorAll("#mode button").forEach(b=>b.addEventListener("click",()=>{
-  mode=b.dataset.m;
-  document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x===b));
-  $("momRow").style.display = mode==="moment" ? "grid":"none";
-  run();
-}));
-
 /* ---- Qa/Qt source: manual or SPT soil report ---- */
 let capMode="manual";
 document.querySelectorAll("#capmode button").forEach(b=>b.addEventListener("click",()=>{
@@ -908,13 +921,13 @@ function computeSoil(){
 }
 
 function read(){
-  const PD=+$("PD").value||0, PL=+$("PL").value||0, mom=mode==="moment";
-  const MxD=mom?(+$("MxD").value||0):0, MxL=mom?(+$("MxL").value||0):0;
-  const MyD=mom?(+$("MyD").value||0):0, MyL=mom?(+$("MyL").value||0):0;
+  const g=id=>+$(id).value||0;
+  const loads={ D:{P:g("D_P"),Mx:g("D_Mx"),My:g("D_My")},
+                L:{P:g("L_P"),Mx:g("L_Mx"),My:g("L_My")},
+                W:{P:g("W_P"),Mx:g("W_Mx"),My:g("W_My")},
+                E:{P:g("E_P"),Mx:g("E_Mx"),My:g("E_My")} };
   return {
-    n:+$("n").value, D:+$("D").value,
-    Ps:PD+PL, Pu:1.2*PD+1.6*PL, PD, PL,
-    Mxs:MxD+MxL, Mys:MyD+MyL, Mxu:1.2*MxD+1.6*MxL, Myu:1.2*MyD+1.6*MyL,
+    n:+$("n").value, D:+$("D").value, loads, inc33:$("inc33").checked,
     Qa:+$("Qa").value, Qt:+$("Qt").value,
     c1:+$("c1").value, c2:+$("c2").value, fc:+$("fc").value, fy:+$("fy").value, db:+$("db").value,
     sf:+$("sf").value, edge:+$("edge").value, hmin:+$("hmin").value, eff:+$("eff").value,
@@ -952,8 +965,8 @@ function calcSheet(inp,res){
       <tr><td>Q<sub>a</sub> (FS / partial)</td><td>${res.soil.Qa_overall} / ${res.soil.Qa_partial} → <b>Q<sub>a</sub> ${res.soil.Qa} kN</b>, Q<sub>t</sub> uplift <b>${Math.max(res.soil.Qup,0).toFixed(0)} kN</b></td></tr>
     </table>` : "";
   let checks=`
-    <tr><td>Pile compression (service)</td><td class="n">${res.wc.toFixed(0)} / ${res.Qa.toFixed(0)} kN</td><td class="n">${rr(res.Qa>0?res.wc/res.Qa:null)}</td></tr>
-    <tr><td>Pile uplift (service)</td><td class="n">${res.wt.toFixed(0)} kN · Q<sub>t</sub> ${res.Qt.toFixed(0)}</td><td class="n">${res.wt>=-res.Qt-1e-6?"OK":"FAIL"}</td></tr>`;
+    <tr><td>Pile compression (service · ${res.govC})</td><td class="n">${res.wc.toFixed(0)} kN · Q<sub>a</sub> ${res.Qa.toFixed(0)}</td><td class="n">${rr(res.compUtil)}</td></tr>
+    <tr><td>Pile uplift (service · ${res.govT})</td><td class="n">min ${res.wt.toFixed(0)} kN · Q<sub>t</sub> ${res.Qt.toFixed(0)}</td><td class="n">${res.upUtil>1e-6?rr(res.upUtil):"none"}</td></tr>`;
   if(res.n>1){
     checks+=`
     <tr><td>Column two-way (punching), incl. γ<sub>v</sub>M<sub>u</sub></td><td class="n"></td><td class="n">${rr(res.colPunch)}</td></tr>
@@ -1006,8 +1019,10 @@ function calcSheet(inp,res){
     <tr><td>Pile group</td><td>${res.n} piles, Ø${res.D} mm, spacing ${res.s.toFixed(2)} m (${(res.s/(res.D/1000)).toFixed(1)}Ø), edge ${(res.edge*1000).toFixed(0)} mm</td></tr>
     <tr><td>Column</td><td>${res.c1} × ${res.c2} mm</td></tr>
     <tr><td>Materials</td><td>f′c ${inp.fc} MPa · fy ${inp.fy} MPa · main bar Ø${inp.db} mm${inp.autobar?" (auto-upsize on)":""}</td></tr>
-    <tr><td>Service load D + L</td><td>${res.Ps.toFixed(0)} kN (D ${res.PD}, L ${res.PL})${(res.Mxu||res.Myu)?` · service Mx ${(inp.Mxs).toFixed(0)}, My ${(inp.Mys).toFixed(0)} kN·m`:""}</td></tr>
-    <tr><td>Factored load 1.2D+1.6L</td><td>${res.Pu.toFixed(0)} kN${(res.Mxu||res.Myu)?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
+    <tr><td>Load cases (P kN · Mx · My)</td><td>D ${inp.loads.D.P} (${inp.loads.D.Mx}, ${inp.loads.D.My}) · L ${inp.loads.L.P} (${inp.loads.L.Mx}, ${inp.loads.L.My}) · W ${inp.loads.W.P} (${inp.loads.W.Mx}, ${inp.loads.W.My}) · E ${inp.loads.E.P} (${inp.loads.E.Mx}, ${inp.loads.E.My})</td></tr>
+    <tr><td>Combinations</td><td>${res.nComboA} service, ${res.nComboS} strength${(res.hasW||res.hasE)?(res.inc33?" · +33% on W/E":" · W/E (no 33%)"):""}; governing size <b>${res.govC}</b>, strength <b>${res.govStr||"—"}</b></td></tr>
+    <tr><td>Service gravity D + L</td><td>${res.Ps.toFixed(0)} kN</td></tr>
+    <tr><td>Governing factored P<sub>u</sub></td><td>${res.Pu.toFixed(0)} kN${(res.Mxu||res.Myu)?` · Mx ${res.Mxu.toFixed(0)}, My ${res.Myu.toFixed(0)} kN·m`:""}</td></tr>
     <tr><td>Allowable Q<sub>a</sub> / Q<sub>t</sub></td><td>${res.Qa.toFixed(0)} / ${res.Qt.toFixed(0)} kN${res.soil?" (from SPT soil report)":" (manual)"}</td></tr>
   </table>
   ${soilSec}
